@@ -455,19 +455,6 @@ def parse_trademark_details(
                             "design_phrase", "No Design phrase presented in document"
                         )
 
-                        # If crucial fields are missing, attempt to re-extract the values
-
-                        # if not trademark_name or not owner or not status or not international_class_number:
-                        #     preprocessed_chunk = preprocess_text(data.get("raw_text", ""))
-                        #     extracted_data = extract_trademark_details_code1(preprocessed_chunk)
-                        #     trademark_name = extracted_data.get("trademark_name", trademark_name).split(',')[0].strip()
-                        #     if "Global Filings" in trademark_name:
-                        #         trademark_name = trademark_name.split("Global Filings")[0].strip()
-                        #     owner = extracted_data.get("owner", owner).split(',')[0].strip()
-                        #     status = extracted_data.get("status", status).split(',')[0].strip()
-                        #     international_class_number = parse_international_class_numbers(extracted_data.get("international_class_number", "")) or international_class_number
-                        #     registration_number = extracted_data.get("registration_number", registration_number).split(',')[0].strip()
-
                         trademark_details = TrademarkDetails(
                             trademark_name=trademark_name,
                             owner=owner,
@@ -572,18 +559,18 @@ def compare_trademarks(
     proposed_classes = [int(c.strip()) for c in proposed_class.split(",")]
 
     # Helper function for semantic equivalence
-    def is_semantically_equivalent(name1, name2, threshold=0.80):
+    def is_semantically_equivalent(name1, name2, threshold=0.90):
         embeddings1 = semantic_model.encode(name1, convert_to_tensor=True)
         embeddings2 = semantic_model.encode(name2, convert_to_tensor=True)
         similarity_score = util.cos_sim(embeddings1, embeddings2).item()
         return similarity_score >= threshold
 
     # Helper function for phonetic equivalence
-    def is_phonetically_equivalent(name1, name2, threshold=80):
+    def is_phonetically_equivalent(name1, name2, threshold=90):
         return fuzz.ratio(name1.lower(), name2.lower()) >= threshold
 
     # Helper function for phonetically equivalent words
-    def first_words_phonetically_equivalent(existing_name, proposed_name, threshold=80):
+    def first_words_phonetically_equivalent(existing_name, proposed_name, threshold=90):
         existing_words = existing_name.lower().split()
         proposed_words = proposed_name.lower().split()
         if len(existing_words) < 2 or len(proposed_words) < 2:
@@ -593,170 +580,7 @@ def compare_trademarks(
             >= threshold
         )
 
-    # def is_exact_match(name1: str, name2: str) -> bool:
-    #     # Initial exact match check
-    #     if name1.strip().lower() == name2.strip().lower():
-    #         return True
-    #     else:
-    #         # Check for near-exact matches using normalized forms
-    #         normalized_name1 = normalize_texts(name1)
-    #         normalized_name2 = normalize_texts(name2)
-    #         if normalized_name1 == normalized_name2:
-    #             return True
-    #         elif fuzz.ratio(normalized_name1, normalized_name2) >= 95:
-    #             # Near-exact match, supplement with LLM
-    #             return is_exact_match_llm(name1, name2)
-    #         else:
-    #             return False
-
-    # def normalize_texts(text: str) -> str:
-    #     import unicodedata
-    #     import re
-
-    #     # Normalize unicode characters
-    #     text = unicodedata.normalize("NFKD", text)
-    #     # Remove diacritics
-    #     text = "".join(c for c in text if not unicodedata.combining(c))
-    #     # Remove special characters and punctuation
-    #     text = re.sub(r"[^\w\s]", "", text)
-    #     # Convert to lowercase and strip whitespace
-    #     return text.lower().strip()
-
-    # def is_exact_match_llm(name1: str, name2: str) -> bool:
-    #     from openai import AzureOpenAI
-    #     import os
-
-    #     azure_endpoint = os.getenv("AZURE_ENDPOINT")
-    #     api_key = os.getenv("AZURE_API_KEY")
-    #     client = AzureOpenAI(
-    #         azure_endpoint=azure_endpoint,
-    #         api_key=api_key,
-    #         api_version="2024-10-01-preview",
-    #     )
-
-    #     prompt = f"""
-    #         Are the following two trademark names considered exact matches, accounting for minor variations such as special characters, punctuation, or formatting? Respond with 'Yes' or 'No'.
-
-    #         Trademark Name 1: "{name1}"
-    #         Trademark Name 2: "{name2}"
-    #         """
-
-    #     messages = [
-    #         {
-    #             "role": "system",
-    #             "content": "You are a trademark expert specializing in name comparisons.",
-    #         },
-    #         {"role": "user", "content": prompt},
-    #     ]
-
-    #     response = client.chat.completions.create(
-    #         model="gpt-4.1-mini",
-    #         messages=messages,
-    #         temperature=0.0,
-    #         max_tokens=5,
-    #     )
-
-    #     answer = response.choices[0].message.content.strip().lower()
-    #     return "yes" in answer.lower()
-
-    # def is_semantically_equivalents(
-    #     name1: str, name2: str, threshold: float = 0.80
-    # ) -> bool:
-    #     embeddings1 = semantic_model.encode(name1, convert_to_tensor=True)
-    #     embeddings2 = semantic_model.encode(name2, convert_to_tensor=True)
-    #     similarity_score = util.cos_sim(embeddings1, embeddings2).item()
-    #     if similarity_score >= threshold:
-    #         return True
-    #     elif similarity_score >= (threshold - 0.1):
-    #         # Near-threshold case, supplement with LLM
-    #         return is_semantically_equivalent_llm(name1, name2)
-    #     else:
-    #         return False
-
-    # def is_semantically_equivalent_llm(name1: str, name2: str) -> bool:
-    #     prompt = f"""
-    #     Are the following two trademark names semantically equivalent? Respond with 'Yes' or 'No'.
-
-    #     Trademark Name 1: "{name1}"
-    #     Trademark Name 2: "{name2}"
-    #     """
-
-    #     azure_endpoint = os.getenv("AZURE_ENDPOINT")
-    #     api_key = os.getenv("AZURE_API_KEY")
-    #     client = AzureOpenAI(
-    #         azure_endpoint=azure_endpoint,
-    #         api_key=api_key,
-    #         api_version="2024-10-01-preview",
-    #     )
-
-    #     messages = [
-    #         {
-    #             "role": "system",
-    #             "content": "You are an expert in trademark law and semantics.",
-    #         },
-    #         {"role": "user", "content": prompt},
-    #     ]
-
-    #     response = client.chat.completions.create(
-    #         model="gpt-4.1-mini",
-    #         messages=messages,
-    #         temperature=0.0,
-    #         max_tokens=5,
-    #     )
-
-    #     answer = response.choices[0].message.content.strip().lower()
-    #     return "yes" in answer.lower()
-
-    # def is_phonetically_equivalents(
-    #     name1: str, name2: str, threshold: int = 80
-    # ) -> bool:
-    #     from metaphone import doublemetaphone
-
-    #     dm_name1 = doublemetaphone(name1)
-    #     dm_name2 = doublemetaphone(name2)
-    #     phonetic_similarity = fuzz.ratio(dm_name1[0], dm_name2[0])
-    #     if phonetic_similarity >= threshold:
-    #         return True
-    #     elif phonetic_similarity >= (threshold - 10):
-    #         # Near-threshold case, supplement with LLM
-    #         return is_phonetically_equivalent_llm(name1, name2)
-    #     else:
-    #         return False
-
-    # def is_phonetically_equivalent_llm(name1: str, name2: str) -> bool:
-
-    #     prompt = f"""
-    #     Do the following two trademark names sound the same or very similar when spoken aloud? Consider differences in spelling but similarities in pronunciation. Respond with 'Yes' or 'No'.
-
-    #     Trademark Name 1: "{name1}"
-    #     Trademark Name 2: "{name2}"
-    #     """
-
-    #     messages = [
-    #         {
-    #             "role": "system",
-    #             "content": "You are an expert in phonetics and trademark law.",
-    #         },
-    #         {"role": "user", "content": prompt},
-    #     ]
-
-    #     azure_endpoint = os.getenv("AZURE_ENDPOINT")
-    #     api_key = os.getenv("AZURE_API_KEY")
-    #     client = AzureOpenAI(
-    #         azure_endpoint=azure_endpoint,
-    #         api_key=api_key,
-    #         api_version="2024-10-01-preview",
-    #     )
-
-    #     response = client.chat.completions.create(
-    #         model="gpt-4.1-mini",
-    #         messages=messages,
-    #         temperature=0.0,
-    #         max_tokens=5,
-    #     )
-
-    #     answer = response.choices[0].message.content.strip().lower()
-    #     return "yes" in answer.lower()
+    # def is_exact_
 
     # Condition 1A: Exact character-for-character match
     condition_1A_satisfied = (
@@ -794,57 +618,6 @@ def compare_trademarks(
             condition_1E_satisfied,
         ]
     )
-
-    # def target_market_and_goods_overlaps(existing_gs, proposed_gs, threshold=0.65):
-    #     embeddings1 = semantic_model.encode(existing_gs, convert_to_tensor=True)
-    #     embeddings2 = semantic_model.encode(proposed_gs, convert_to_tensor=True)
-    #     similarity_score = util.cos_sim(embeddings1, embeddings2).item()
-    #     if similarity_score >= threshold:
-    #         return True
-    #     elif similarity_score >= (threshold - 0.1):
-    #         # Supplement with LLM
-    #         return target_market_and_goods_overlap_llm(existing_gs, proposed_gs)
-    #     else:
-    #         # Further check using keyword overlap
-    #         # ... Additional code
-    #         return False
-
-    # def target_market_and_goods_overlap_llm(existing_gs: str, proposed_gs: str) -> bool:
-    #     prompt = f"""
-    #         Do the goods and services described in the existing trademark and the proposed trademark overlap or target the same market? Consider the descriptions carefully. Respond with 'Yes' or 'No'.
-
-    #         Existing Trademark Goods/Services:
-    #         "{existing_gs}"
-
-    #         Proposed Trademark Goods/Services:
-    #         "{proposed_gs}"
-    #         """
-
-    #     messages = [
-    #         {
-    #             "role": "system",
-    #             "content": "You are an expert in trademark law and market analysis.",
-    #         },
-    #         {"role": "user", "content": prompt},
-    #     ]
-
-    #     azure_endpoint = os.getenv("AZURE_ENDPOINT")
-    #     api_key = os.getenv("AZURE_API_KEY")
-    #     client = AzureOpenAI(
-    #         azure_endpoint=azure_endpoint,
-    #         api_key=api_key,
-    #         api_version="2024-10-01-preview",
-    #     )
-
-    #     response = client.chat.completions.create(
-    #         model="gpt-4.1-mini",
-    #         messages=messages,
-    #         temperature=0.0,
-    #         max_tokens=5,
-    #     )
-
-    #     answer = response.choices[0].message.content.strip().lower()
-    #     return "yes" in answer.lower()
 
     # Condition 2: Overlap in International Class Numbers
     condition_2_satisfied = bool(
@@ -919,18 +692,6 @@ def compare_trademarks(
     condition_3_satisfied = target_market_and_goods_overlap(
         existing_trademark["goods_services"], proposed_goods_services
     )
-
-    # condition_1A_satisfieds = is_exact_match(existing_trademark['trademark_name'].strip().lower(), proposed_name.strip().lower())
-    # st.write(f"Exact Match: {condition_1A_satisfieds}")
-
-    # condition_1B_satisfieds = is_semantically_equivalents(existing_trademark['trademark_name'].strip().lower(), proposed_name.strip().lower())
-    # st.write(f"Semantically equivalents : {condition_1B_satisfieds}")
-
-    # condition_1C_satisfieds = is_phonetically_equivalents(existing_trademark['trademark_name'], proposed_name)
-    # st.write(f"Phonetically equivalents : {condition_1C_satisfieds}")
-
-    # condition_3_satisfieds = target_market_and_goods_overlaps(existing_trademark['goods_services'], proposed_goods_services)
-    # st.write(f"Goods and services match's : {condition_3_satisfieds}")
 
     # Clean and standardize the trademark status
     status = existing_trademark["status"].strip().lower()
@@ -1489,34 +1250,6 @@ def list_conversion(proposed_class: str) -> List[int]:
             "content": f"The class number are: {proposed_class}. convert the string into python list of numbers.",
         },
     ]
-    # messages = [
-    # {
-    #     "role": "system",
-    #     "content": "You are a helpful assistant that converts strings of class numbers into Python lists of integers."
-    # },
-    # {
-    # "role": "user",
-    # "content": f"""
-    #     Convert the following string of class numbers into a Python list of integers.
-
-    #     **Instructions:**
-
-    #     - The input is a string of numbers separated by commas (e.g., `15,89`).
-    #     - **Respond only** with a Python list of integers (e.g., `[15, 89]`).
-    #     - Do not include any additional text or commentary.
-    #     - Ensure the numbers are integers, not strings.
-
-    #     **Example:**
-
-    #     - Input: "15,89"
-    #     - Response: [15, 89]
-
-    #     **Input:**
-
-    #     "{proposed_class}"
-    #     """
-    # }
-    # ]
 
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
@@ -1950,12 +1683,12 @@ from fuzzywuzzy import fuzz
 semantic_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 # Thresholds and margins
-SEM_THRESHOLD = 0.80
+SEM_THRESHOLD = 0.90
 SEM_MARGIN = 0.05
 SEM_HIGH = SEM_THRESHOLD + SEM_MARGIN  # 0.85
 SEM_LOW = SEM_THRESHOLD - SEM_MARGIN  # 0.75
 
-PH_THRESHOLD = 80
+PH_THRESHOLD = 90
 PH_MARGIN = 5
 PH_HIGH = PH_THRESHOLD + PH_MARGIN  # 85
 PH_LOW = PH_THRESHOLD - PH_MARGIN  # 75
@@ -2001,138 +1734,58 @@ def ml_phonetic_match(name1: str, name2: str) -> tuple:
 
 def section_one_analysis(mark, class_number, goods_services, relevant_conflicts):
     """
-    Perform Section I: Comprehensive Trademark Hit Analysis using chain of thought prompting.
-    This approach explicitly walks through the analysis process to ensure consistent results.
+    Perform Section I: Comprehensive Trademark Hit Analysis
     """
     client = get_azure_client()
 
     system_prompt = """
-You are a highly experienced trademark attorney specializing in trademark conflict analysis and opinion writing. Your task is to assess potential trademark conflicts using detailed, step-by-step chain of thought reasoning.
+Analyze proposed trademark conflicts using these precise steps:
 
-Follow this structure precisely:
+1. COORDINATED CLASS ANALYSIS:
+   - Identify classes related to the proposed goods/services
+   - Justify each coordinated class with direct commercial links
 
-1. STEP 1 - COORDINATED CLASS ANALYSIS:
-   a) Thoroughly analyze the scope and nature of the proposed goods/services: "{goods_services}".
-   b) Identify all additional trademark classes that are commercially related, complementary, or likely to be perceived by consumers as coordinated with the primary class {class_number}. Consider channels of trade, target consumers, and common industry practices.
-   c) Provide a detailed, specific justification for including each coordinated class, explaining the commercial or conceptual link to the primary class and proposed goods/services.
-   d) Produce a definitive list comprising the primary class and all justified coordinated classes relevant for the conflict assessment.
+2. IDENTICAL MARK ANALYSIS:
+   - Find exact character matches to proposed mark
+   - Determine class match and goods/services overlap
 
-2. STEP 2 - IDENTICAL MARK ANALYSIS:
-   a) Systematically identify all registered or pending trademarks **strictly from the provided `relevant_conflicts` list** within the relevant classes (primary and coordinated) that are an EXACT character-for-character match to the proposed mark "{mark}", disregarding case. **Do not invent or assume marks not present in the input data.**
-   b) For each identically matching mark found, critically assess:
-      - Does the mark reside in the exact SAME class ({class_number}) as the proposed mark?
-      - Is the mark registered in any of the COORDINATED classes identified in Step 1?
-      - Are the specific goods/services listed for the identical mark similar, related, competitive, or likely to overlap in the marketplace with the proposed goods/services ("{goods_services}")?
-   c) Clearly specify the boolean `class_match` (True if in the same or coordinated class) and `goods_services_match` (True if goods/services are similar/related/overlapping) values for each identified identical mark.
-   d) For instance, if a proposed mark for specific goods in a certain class is found to have an existing registration with the exact same name, covering identical goods/services within the same class, this constitutes a direct hit.
+3. ONE/TWO LETTER ANALYSIS:
+   - Identify marks with 1-2 letter differences
+   - Document class and goods/services matching
 
-3. STEP 3 - ONE LETTER DIFFERENCE ANALYSIS:
-   a) Identify all registered or pending trademarks within the relevant classes that differ from the proposed mark "{mark}" by precisely ONE letter.
-   b) This includes variations involving a single letter substitution, addition, or deletion.
-   c) For each qualifying mark, specify the `class_match` and `goods_services_match` values, and explicitly state the type of single-letter variation observed.
+4. SIMILAR MARK ANALYSIS:
+   - Identify marks with phonetic, semantic, or functional similarity
+   - Document similarity type and matching criteria
 
-4. STEP 4 - TWO LETTER DIFFERENCE ANALYSIS:
-   a) Identify all registered or pending trademarks within the relevant classes that differ from the proposed mark "{mark}" by exactly TWO letters.
-   b) These differences can arise from two substitutions, two additions, two deletions, or any combination thereof.
-   c) For each qualifying mark, specify the `class_match` and `goods_services_match` values, and detail the nature of the two-letter variation.
+5. CROWDED FIELD:
+   - Calculate percentage of conflicting marks with different owners
+   - Determine crowded field status (>50% different owners)
 
-5. STEP 5 - SIMILAR MARK ANALYSIS (CRITICAL ASSESSMENT):
-   a) First, identify trademarks that, while not identical or differing by only one/two letters, share significant overlapping portions with the proposed mark "{mark}" or incorporate its key distinctive elements.
-   b) Subsequently, conduct a multi-faceted analysis of these potentially similar marks compared to "{mark}", considering:
-      - Phonetic Similarity (Sound):
-        1) Evaluate how the trademarks sound when pronounced naturally.
-        2) Analyze similarities in rhythm, cadence, syllable count/stress, vowel/consonant sounds, and overall auditory impression.
-        3) Focus on marks sharing dominant or memorable sound patterns with "{mark}".
-        4) Example: Two marks sharing a core sound and conveying similar energetic concepts.
-        5) CRUCIAL: Identify phonetic similarities even when words are combined/separated differently (e.g., a combined word vs. two separate words or a hyphenated version). Consider variations that sound phonetically close.
-        6) CRUCIAL: Detect phonetic similarity where word structures differ (e.g., a combined word vs. two separate words).
-      - Semantic Similarity (Meaning/Concept):
-        1) Examine the inherent meanings, connotations, ideas, and overall commercial impressions conveyed by the trademarks.
-        2) Identify marks that suggest the same or a very similar concept, quality, or characteristic, even using different terminology.
-        3) Look for marks creating analogous mental associations for consumers.
-        4) Example: Two marks semantically suggesting a similar product experience.
-        5) CRUCIAL: Identify semantic similarity arising from combined words (e.g., two marks implying a similar function like retention).
-        6) CRUCIAL: For multi-word proposed marks, actively search for existing marks containing ALL essential components, irrespective of order or intervening words.
-        7) Example: Two marks sharing a core conceptual term.
-        8) Example: Multiple marks sharing a common descriptive term.
-        9) Example: Marks with similar meaning despite different spelling.
-      - Commercial Impression (Overall Feel):
-        1) Assess the holistic impression the marks are likely to leave on the average consumer in the relevant market.
-        2) Consider the 'look and feel', memorability, and the overall message conveyed.
-        3) Evaluate if marks, despite literal differences, project a similar brand identity or market positioning.
-        4) Example: Two marks creating an impression of similar types of items.
-        5) CRUCIAL: Recognize similar commercial impressions created by variations in word combination or structure (e.g., a mark with an additional descriptive word vs. the core mark).
-   c) Key Similarity Evaluation Factors:
-      1) Analyze the mark in its entirety, but give weight to dominant or distinctive elements.
-      2) Consider conceptually unified word combinations even if visually separated (e.g., hyphenated or spaced).
-      3) Account for variations in component word presentation (combined, separated, hyphenated).
-      4) For compound/multi-word marks, rigorously check for conflicts containing the same core components in any configuration.
-   d) For each mark deemed similar, provide a clear, explicit rationale explaining the basis for similarity (Phonetic, Semantic, Commercial Impression, or a combination).
-   e) For every similar mark, specify the `class_match` and `goods_services_match` values.
-
-6. STEP 6 - CROWDED FIELD ANALYSIS:
-   a) Calculate the total count of potentially conflicting marks identified across Steps 2, 3, 4, and 5.
-   b) Determine the number of distinct owners represented among these potentially conflicting marks.
-   c) Calculate the percentage of potentially conflicting marks held by different owners.
-   d) Assess if the relevant market space constitutes a "crowded field" (generally indicated if >50% of conflicting marks are held by distinct owners).
-   e) Explain the practical implications of a crowded field (or lack thereof) on the scope of trademark protection available for "{mark}" and the potential risks of enforcement actions.
-FOR EACH POTENTIAL CONFLICTING MARK, INCLUDE:
-- The exact mark name
-- The owner's name
-- A full description of goods/services
-- Registration status (REGISTERED/PENDING)
-- Class number
-- Whether there is a class match (true/false)
-- Whether there is a goods/services match (true/false)
-
-FORMAT YOUR RESPONSE STRICTLY IN JSON:
-
+FORMAT RESPONSE IN JSON:
 {
-  "identified_coordinated_classes": [LIST OF RELATED CLASS NUMBERS],
-  "coordinated_classes_explanation": "[DETAILED EXPLANATION OF COORDINATED CLASSES]",
+  "identified_coordinated_classes": [CLASS NUMBERS],
+  "coordinated_classes_explanation": "[BRIEF EXPLANATION]",
   "identical_marks": [
     {
-      "mark": "[TRADEMARK NAME]",
-      "owner": "[OWNER NAME]",
-      "goods_services": "[FULL GOODS/SERVICES DESCRIPTION]",
-      "status": "[REGISTERED/PENDING]",
-      "class": "[CLASS NUMBER]",
+      "mark": "[NAME]",
+      "owner": "[OWNER]",
+      "goods_services": "[DESCRIPTION]",
+      "status": "[STATUS]",
+      "class": "[CLASS]",
       "class_match": true|false,
       "goods_services_match": true|false
     }
   ],
-  "one_letter_marks": [
-    {
-      "mark": "[TRADEMARK NAME]",
-      "owner": "[OWNER NAME]",
-      "goods_services": "[FULL GOODS/SERVICES DESCRIPTION]",
-      "status": "[REGISTERED/PENDING]",
-      "class": "[CLASS NUMBER]",
-      "difference_type": "One Letter",
-      "class_match": true|false,
-      "goods_services_match": true|false
-    }
-  ],
-  "two_letter_marks": [
-    {
-      "mark": "[TRADEMARK NAME]",
-      "owner": "[OWNER NAME]",
-      "goods_services": "[FULL GOODS/SERVICES DESCRIPTION]",
-      "status": "[REGISTERED/PENDING]",
-      "class": "[CLASS NUMBER]",
-      "difference_type": "Two Letter",
-      "class_match": true|false,
-      "goods_services_match": true|false
-    }
-  ],
+  "one_letter_marks": [...],
+  "two_letter_marks": [...],
   "similar_marks": [
     {
-      "mark": "[TRADEMARK NAME]",
-      "owner": "[OWNER NAME]",
-      "goods_services": "[FULL GOODS/SERVICES DESCRIPTION]",
-      "status": "[REGISTERED/PENDING]",
-      "class": "[CLASS NUMBER]",
-      "similarity_type": "[Phonetic|Semantic|Functional]",
+      "mark": "[NAME]",
+      "owner": "[OWNER]",
+      "goods_services": "[DESCRIPTION]",
+      "status": "[STATUS]",
+      "class": "[CLASS]",
+      "similarity_type": "[TYPE]",
       "class_match": true|false,
       "goods_services_match": true|false
     }
@@ -2140,9 +1793,29 @@ FORMAT YOUR RESPONSE STRICTLY IN JSON:
   "crowded_field": {
     "is_crowded": true|false,
     "percentage": [PERCENTAGE],
-    "explanation": "[CLEAR EXPLANATION OF CROWDING AND ITS IMPLICATIONS]"
+    "explanation": "[BRIEF EXPLANATION]"
   }
 }
+"""
+
+    user_message = f"""
+Proposed Trademark: {mark}
+Class: {class_number}
+Goods/Services: {goods_services}
+
+Analyze conflicts using:
+- Coordinated class analysis
+- Identical mark analysis
+- One/two letter difference analysis
+- Similar mark analysis
+- Crowded field analysis
+
+For similar marks, focus strictly on close matches only:
+- Phonetic similarity: Only exact sound matches
+- Semantic similarity: Only direct meaning equivalents
+- Commercial impression: Only marks creating same consumer impression
+
+Apply stricter matching criteria than typical standards.
 """
 
     user_message = f""" 
@@ -3793,17 +3466,6 @@ if uploaded_files:
                 # extracted_web_law ----- Web common law stored in this variable
 
                 # PRAVEEN WEB COMMON LAW CODE END'S HERE-------------------------------------------------------------------------------------------------------------------------
-
-                # e_time = time.time()
-                # elap_time = e_time - s_time
-                # elap_time = elap_time // 60
-                # st.write(f"Time taken for extraction: {elap_time} mins")
-
-                # e_time = time.time()
-                # elap_time = e_time - s_time
-                # st.write(f"Time taken: {elap_time} seconds")
-
-                # Display extracted details
 
                 nfiltered_list = []
                 unsame_class_list = []
