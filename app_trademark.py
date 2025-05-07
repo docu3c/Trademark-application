@@ -14,6 +14,8 @@ from io import BytesIO
 import re, ast
 import nltk
 from dotenv import load_dotenv
+import json
+from openai import AzureOpenAI
 
 load_dotenv()
 
@@ -977,101 +979,6 @@ def assess_conflict(
     }
 
 
-import os
-import json
-from openai import AzureOpenAI
-
-
-# Function to compare trademarks
-def compare_trademarks2(
-    existing_trademark: List[Dict[str, Union[str, List[int]]]],
-    proposed_name: str,
-    proposed_class: str,
-    proposed_goods_services: str,
-) -> List[Dict[str, Union[str, int]]]:
-    proposed_classes = [int(c.strip()) for c in proposed_class.split(",")]
-
-    # Prepare the messages for the Azure OpenAI API
-    messages = [
-        {
-            "role": "system",
-            "content": """  
-            You are a trademark attorney tasked with determining a conflict grade based on the given conditions.  
-            
-            **Additional Instructions:**  
-            
-            - Consider if the proposed trademark name appears anywhere within the existing trademark name, or if significant parts of the existing trademark name appear in the proposed name.  
-            - Evaluate shared words between trademarks, regardless of their position.  
-            - Assess phonetic similarities, including partial matches.  
-            - Consider the overall impression created by the trademarks, including similarities in appearance, sound, and meaning.  
-            
-            Follow the conflict grading criteria as previously outlined, assigning "Name-Match" or "Low" based on your analysis.  
-            """,
-        },
-        {
-            "role": "user",
-            "content": f"""  
-            Evaluate the potential conflict between the following existing trademarks and the proposed trademark.  
-            
-            **Proposed Trademark:**  
-            - Name: "{proposed_name}"  
-            
-            **Existing Trademarks:**  
-            - Name: "{existing_trademark['trademark_name']}"  
-            - Status: "{existing_trademark['status']}"
-            
-            **Instructions:**  
-            1. Review the proposed and existing trademark data.  
-            2. Determine if the trademarks are likely to cause confusion based on the Trademark name such as Phonetic match, Semantic similarity and String similarity.  
-            3. Return the output with Conflict Grade only as 'Name-Match' or 'Low', based on the reasoning. 
-            4. Provide reasoning for each Conflict Grade.
-            5. Special Case: If the existing trademark status is "Cancelled" or "Abandoned," it will automatically be considered as Conflict Grade: Low.  
-            
-            **Output Format:**  
-                Existing Name: Name of the existing trademark.
-                Reasoning: Reasoning for the conflict grade.
-                Conflict Grade: Name-Match
-        """,
-        },
-    ]
-
-    # Initialize the Azure OpenAI client
-    # azure_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
-    # api_key = st.secrets["AZURE_OPENAI_API_KEY"]
-    azure_endpoint = os.getenv("AZURE_ENDPOINT")
-    api_key = os.getenv("AZURE_API_KEY")
-
-    if not azure_endpoint or not api_key:
-        raise ValueError(
-            "Azure endpoint or API key is not set in environment variables."
-        )
-
-    client = AzureOpenAI(
-        azure_endpoint=azure_endpoint, api_key=api_key, api_version="2024-10-01-preview"
-    )
-
-    # Call Azure OpenAI to get the response
-    try:
-        response_reasoning = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=messages,
-            temperature=0,
-            max_tokens=500,
-            top_p=1,
-        )
-
-        # Extract the content from the response
-        reasoning_content = response_reasoning.choices[0].message.content
-        conflict_grade = reasoning_content.split("Conflict Grade:", 1)[1].strip()
-        st.write(reasoning_content)
-
-        return conflict_grade
-
-    except Exception as e:
-        print(f"Error while calling Azure OpenAI API: {e}")
-        return []
-
-
 def extract_proposed_trademark_details(
     file_path: str,
 ) -> Dict[str, Union[str, List[int]]]:
@@ -1685,13 +1592,13 @@ semantic_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 # Thresholds and margins
 SEM_THRESHOLD = 0.90
 SEM_MARGIN = 0.05
-SEM_HIGH = SEM_THRESHOLD + SEM_MARGIN  # 0.85
-SEM_LOW = SEM_THRESHOLD - SEM_MARGIN  # 0.75
+SEM_HIGH = SEM_THRESHOLD + SEM_MARGIN  # 0.95
+SEM_LOW = SEM_THRESHOLD - SEM_MARGIN  # 0.85
 
 PH_THRESHOLD = 90
 PH_MARGIN = 5
-PH_HIGH = PH_THRESHOLD + PH_MARGIN  # 85
-PH_LOW = PH_THRESHOLD - PH_MARGIN  # 75
+PH_HIGH = PH_THRESHOLD + PH_MARGIN  # 93
+PH_LOW = PH_THRESHOLD - PH_MARGIN  # 83
 
 
 def ml_semantic_match(name1: str, name2: str) -> tuple:
@@ -1748,14 +1655,28 @@ Analyze proposed trademark conflicts using these precise steps:
 2. IDENTICAL MARK ANALYSIS:
    - Find exact character matches to proposed mark
    - Determine class match and goods/services overlap
+   - For each trademark (proposed and conflicts), identify the prominent word(s):
+     * The most distinctive or unique word in a multi-word mark
+     * Words that create the strongest commercial impression
+     * Words that consumers would likely remember or use to identify the product
+     * Usually NOT common descriptive terms or articles (a, the, an)
+   - Examples: 
+     * In "Long Live Hair" - "Long Live" is prominent (distinctive phrase)
+     * In "Hair Genius" - "Genius" is prominent (more distinctive than "Hair")
+     * In "Alpha Brain Smart Gummies" - "Alpha Brain" is prominent (brand element)
+   - Compare the prominent words in each mark
 
 3. ONE/TWO LETTER ANALYSIS:
    - Identify marks with 1-2 letter differences
    - Document class and goods/services matching
+   - Analyze if the prominent words are affected by these letter differences
 
 4. SIMILAR MARK ANALYSIS:
-   - Identify marks with phonetic, semantic, or functional similarity
+   - First identify prominent words in both proposed and conflict marks
+   - Then analyze marks for phonetic, semantic, or functional similarity based on their prominent words
+   - PAY SPECIAL ATTENTION to marks with the same prominent words
    - Document similarity type and matching criteria
+   - Explicitly note when prominent words match between marks
 
 5. CROWDED FIELD:
    - Calculate percentage of conflicting marks with different owners
@@ -1768,6 +1689,7 @@ FORMAT RESPONSE IN JSON:
   "identical_marks": [
     {
       "mark": "[NAME]",
+      "prominent_words": ["[WORD1]", "[WORD2]"],
       "owner": "[OWNER]",
       "goods_services": "[DESCRIPTION]",
       "status": "[STATUS]",
@@ -1776,16 +1698,18 @@ FORMAT RESPONSE IN JSON:
       "goods_services_match": true|false
     }
   ],
-  "one_letter_marks": [...],
-  "two_letter_marks": [...],
+  "one_letter_marks": [...similar structure with prominent_words...],
+  "two_letter_marks": [...similar structure with prominent_words...],
   "similar_marks": [
     {
       "mark": "[NAME]",
+      "prominent_words": ["[WORD1]", "[WORD2]"],
       "owner": "[OWNER]",
       "goods_services": "[DESCRIPTION]",
       "status": "[STATUS]",
       "class": "[CLASS]",
       "similarity_type": "[TYPE]",
+      "prominent_word_match": true|false,
       "class_match": true|false,
       "goods_services_match": true|false
     }
@@ -1798,91 +1722,67 @@ FORMAT RESPONSE IN JSON:
 }
 """
 
-    user_message = f"""
+    user_message = f""" 
 Proposed Trademark: {mark}
 Class: {class_number}
 Goods/Services: {goods_services}
 
-Analyze conflicts using:
-- Coordinated class analysis
-- Identical mark analysis
-- One/two letter difference analysis
-- Similar mark analysis
-- Crowded field analysis
+Trademark Conflicts:
+{json.dumps(relevant_conflicts, indent=2)}
 
-For similar marks, focus strictly on close matches only:
-- Phonetic similarity: Only exact sound matches
-- Semantic similarity: Only direct meaning equivalents
-- Commercial impression: Only marks creating same consumer impression
+Analyze ONLY Section I: Comprehensive Trademark Hit Analysis. Follow these precise steps:
 
-Apply stricter matching criteria than typical standards.
-"""
+STEP 1: COORDINATED CLASS ANALYSIS
+- Carefully examine the proposed goods/services
+- Identify ALL classes related to the primary class "{class_number}"
+- Justify each coordinated class with direct commercial links
+- Provide a complete list of all relevant classes for conflict analysis
 
-    user_message = f""" 
-    Proposed Trademark: {mark}
-    Class: {class_number}
-    Goods/Services: {goods_services}
-    
-    Trademark Conflicts:
-    {json.dumps(relevant_conflicts, indent=2)}
-    
-    Analyze ONLY Section I: Comprehensive Trademark Hit Analysis. Proceed step by step with clear reasoning and structured output:
-    
-    STEP 1: Coordinated Class Analysis  
-    - Carefully examine the proposed goods/services.  
-    - Identify ALL classes that are coordinated or closely related to the primary class "{class_number}".  
-    - Justify each coordinated class you identify with reasoning based on commercial relationship or consumer perception.  
-    - Provide a complete list of all classes relevant to the conflict analysis.
-    
-    STEP 2: Identical Mark Analysis  
-    - Identify all trademarks that EXACTLY match the proposed mark "{mark}" (case-insensitive).  
-    - For each mark, check:  
-      * Is it in the SAME class?  
-      * Is it in a COORDINATED class (from Step 1)?  
-      * Are the goods/services related or overlapping?  
-    - Clearly state `class_match` and `goods_services_match` values for each mark.
-    
-    STEP 3: One Letter Difference Analysis  
-    - Identify marks with only ONE letter difference (substitution, addition, or deletion).  
-    - For each, determine whether there's a `class_match` and `goods_services_match`.
-    
-    STEP 4: Two Letter Difference Analysis  
-    - Identify marks that differ by exactly TWO letters (substitution, addition, deletion, or a mix).  
-    - For each, indicate `class_match` and `goods_services_match`.
-    
-    STEP 5: Similar Mark Analysis  
-    - Identify marks similar to "{mark}" in any of the following ways:  
-      * Phonetic (sounds similar)  
-      * Semantic (has similar meaning)  
-      * Functional (conveys similar commercial impression)  
-    - **VERY IMPORTANT FOR COMPOUND MARKS**: 
-      * For compound words like "COLORGRIP", look for marks where the words are separated like "COLOR GRIP" or "COLOR-GRIP"
-      * SALLY HANSEN COLOR GRIP PRIMER is also an example for compound words which are similar ( include such marks too)
-      * For multi-word marks like "SMART GUMMIES", look for marks where the words are combined like "SMARTGUMMIES"
-      * Look for parts in multi-word marks like ALPHA BRAIN SMART GUMMIES similar to SMART GUMMY.
-      * Look for marks where components are arranged differently but convey the same meaning (e.g., "COLOR HOLD" for "COLORGRIP")
-      * For compound or multi-word marks, identify ANY mark containing ALL the component words in ANY arrangement
-      * Pay special attention to mark variants where the words might be combined, separated, or hyphenated
-    - Justify the type of similarity for each mark and assess `class_match` and `goods_services_match`.
-    
-    STEP 6: Crowded Field Analysis  
-    - Count the total number of potentially conflicting marks identified.  
-    - Calculate what percentage have DIFFERENT owners.  
-    - Determine if the field is "crowded" (over 50% owned by different parties).  
-    - Explain the trademark protection implications in a crowded field context.
-    
-    IMPORTANT REMINDERS:  
-    - Focus on the full trademark, not just partial or component words.  
-    - For compound words, ensure you analyze both combined forms (e.g., "COLORGRIP") and separated forms (e.g., "COLOR GRIP") .
-    - For multi-word marks, look for combined forms (e.g., "SMART GUMMIES" vs "SMARTGUMMIES").
-    - Always include full owner names and full goods/services descriptions.  
-    - For `class_match`:  
-      * Mark as True if in class "{class_number}"  
-      * OR if in a coordinated class identified in Step 1  
-    - For `goods_services_match`:  
-      * Compare the mark's goods/services directly to the proposed goods/services.  
-    - Ensure letter difference analysis is exact (i.e., exactly one or two letters, not more).  
-    - In Similar Mark Analysis, explicitly label the similarity type: Phonetic, Semantic, or Functional.
+STEP 2: IDENTICAL MARK ANALYSIS
+- Find exact character matches to the proposed mark "{mark}" (case-insensitive)
+- For each mark, first identify the prominent words:
+  * Most distinctive or unique words in the mark
+  * Words that create the strongest commercial impression
+  * Words consumers would likely remember or use to identify the product
+  * NOT common descriptive terms or articles (a, the, an)
+- Then determine:
+  * Is it in the SAME class?
+  * Is it in a COORDINATED class (from Step 1)?
+  * Are the goods/services related or overlapping?
+- Compare the prominent words in each mark
+- Clearly state `class_match` and `goods_services_match` values
+
+STEP 3: ONE/TWO LETTER ANALYSIS
+- Identify marks with only ONE or TWO letter differences (substitution, addition, deletion)
+- For each mark, first identify the prominent words
+- Document class and goods/services matching
+- Analyze whether the prominent words are affected by these letter differences
+
+STEP 4: SIMILAR MARK ANALYSIS
+- For each potentially similar mark, first identify the prominent words
+- Only then analyze for phonetic, semantic, or functional similarity based on these prominent words
+- PAY SPECIAL ATTENTION to marks with the same prominent words
+- Look for phonetic similarities (e.g., "CLEAR"/"KLEER", "GRIP"/"HOLD")
+- For compound marks (e.g., "COLORGRIP" vs "COLOR GRIP"), identify all variants
+- Look for marks where components are arranged differently but mean the same thing
+- Explicitly note when prominent words match between marks
+- Justify the type of similarity and assess `class_match` and `goods_services_match`
+
+STEP 5: CROWDED FIELD ANALYSIS
+- Count the total number of potentially conflicting marks identified
+- Calculate what percentage have DIFFERENT owners
+- Determine if the field is "crowded" (over 50% different owners)
+- Explain trademark protection implications in a crowded field context
+
+FORMAT RESPONSE IN JSON as specified in the instructions.
+
+IMPORTANT REMINDERS:
+- Always include prominent words for every mark as part of your analysis
+- Prominent word identification is a crucial substep for ALL similarity analyses
+- For `class_match`: Mark as True if in class "{class_number}" OR in a coordinated class
+- For `goods_services_match`: Compare directly to the proposed goods/services
+- Ensure letter difference analysis is exact (i.e., exactly one or two letters)
+- In Similar Mark Analysis, explicitly label the similarity type and note prominent word matches
 """
 
     try:
@@ -2231,6 +2131,18 @@ IMPORTANT REMINDERS:
                     "explanation": "Unable to determine crowded field status.",
                 },
             }
+    except Exception as e:
+        print(f"Error in section_two_analysis: {str(e)}")
+        return {
+            "identified_coordinated_classes": [],
+            "coordinated_classes_explanation": "Error occurred during analysis",
+            "components": [],
+            "crowded_field": {
+                "total_hits": 0,
+                "distinct_owner_percentage": 0,
+                "explanation": "Unable to determine crowded field status.",
+            },
+        }
     except Exception as e:
         print(f"Error in section_two_analysis: {str(e)}")
         return {
@@ -3517,12 +3429,9 @@ if uploaded_files:
                         )
 
                         if conflict["conflict_grade"] == "Name-Match":
-                            # conflict_validation = compare_trademarks2(existing_trademarks, proposed_name, proposed_class, proposed_goods_services)
-                            # if conflict_validation == "Name-Match":
                             Name_Matchs.append(conflict)
                         else:
                             print("Low")
-                            # low_conflicts.append(conflict)
 
                 st.sidebar.write("_________________________________________________")
                 st.sidebar.subheader("\n\nConflict Grades : \n")
