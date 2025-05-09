@@ -1,14 +1,18 @@
 import os
 from dotenv import load_dotenv
 from openai import AzureOpenAI
+import streamlit as st
 
 # Load environment variables
 load_dotenv()
 
 # Azure OpenAI Configuration
-AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT")
-AZURE_API_KEY = os.getenv("AZURE_API_KEY")
+# AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT")
+# AZURE_API_KEY = os.getenv("AZURE_API_KEY")
 AZURE_API_VERSION = "2024-08-01-preview"
+
+AZURE_ENDPOINT = st.secrets["AZURE_ENDPOINT"]
+AZURE_API_KEY = st.secrets["AZURE_API_KEY"]
 
 
 def get_azure_client() -> AzureOpenAI:
