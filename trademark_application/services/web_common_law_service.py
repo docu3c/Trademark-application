@@ -8,8 +8,7 @@ from PIL import Image
 from typing import List
 import numpy as np
 import fitz
-from ..utils.ml_utils import encode_image, process_single_image
-from ..utils.text_processing import normalize_text_name
+from utils.ml_utils import process_single_image
 
 
 def web_law_page(document_path: str) -> List[Image.Image]:

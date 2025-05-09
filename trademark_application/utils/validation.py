@@ -6,13 +6,11 @@ import json
 
 
 def is_correct_format_code1(page_text: str) -> bool:
-    """Check if page follows format code 1"""
     required_fields = ["Status:", "Goods/Services:"]
     return all(field in page_text for field in required_fields)
 
 
 def is_correct_format_code2(page_text: str) -> bool:
-    """Check if page follows format code 2"""
     required_fields = ["Register", "Nice Classes", "Goods & Services"]
     return all(field in page_text for field in required_fields)
 

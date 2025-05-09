@@ -12,8 +12,8 @@ from pydantic import ValidationError
 import fitz
 import re
 
-from .models.trademark import TrademarkDetails
-from .services.extraction_service import (
+from models.trademark import TrademarkDetails
+from services.extraction_service import (
     extract_proposed_trademark_details,
     extract_proposed_trademark_details2,
     extract_trademark_details_code1,
@@ -24,24 +24,24 @@ from .services.extraction_service import (
     extract_ownership,
     extract_international_class_numbers_and_goods_services,
 )
-from .services.analysis_service import run_trademark_analysis
-from .utils.validation import is_correct_format_code1, is_correct_format_code2
-from .utils.text_processing import preprocess_text, list_conversion
+from services.analysis_service import run_trademark_analysis
+from utils.validation import is_correct_format_code1, is_correct_format_code2
+from utils.text_processing import preprocess_text, list_conversion
 
-from .services.export_service import export_trademark_opinion_to_word
-from .utils.text_processing import list_conversion
-from .services.pdf_service import (
-    extract_proposed_trademark_details,
-    extract_proposed_trademark_details2,
+from services.export_service import (
+    export_trademark_opinion_to_word,
+    add_conflict_paragraph,
+    add_conflict_paragraph_to_array,
 )
-from .services.comparison_service import compare_trademarks, assess_conflict
-from .services.web_common_law_service import (
+from utils.text_processing import list_conversion
+from services.comparison_service import compare_trademarks, assess_conflict
+from services.web_common_law_service import (
     web_law_page,
     extract_web_common_law,
     analyze_web_common_law,
 )
-from .services.analysis_service import parse_trademark_details, list_conversion
-from .services.export_service import (
+from utils.formatting_utils import list_conversion
+from services.export_service import (
     export_trademark_opinion_to_word,
 )
 
@@ -191,7 +191,7 @@ def parse_trademark_details(
 
 
 # Streamlit App
-st.title("Trademark Document Parser Version 6.9")
+st.title("Trademark Document Parser Version 7.0")
 
 # File upload
 uploaded_files = st.sidebar.file_uploader(
@@ -294,18 +294,12 @@ if uploaded_files:
 
             if sp:
                 progress_bar.progress(25)
-                # Initialize AzureChatOpenAI
-
-                # s_time = time.time()
 
                 existing_trademarks = parse_trademark_details(temp_file_path)
                 st.write(len(existing_trademarks))
-                # for i in range(25,46):
-                #     progress_bar.progress(i)
 
                 # PRAVEEN WEB COMMON LAW CODE START'S HERE-------------------------------------------------------------------------------------------------------------------------
 
-                # Updated usage in your Streamlit code would look like:
                 # !!! Function used extract the web common law pages into images
                 full_web_common_law = web_law_page(temp_file_path)
 
@@ -357,6 +351,8 @@ if uploaded_files:
                 no_conflicts = []
 
                 lt = len(existing_trademarks)
+                print(f"Existing trademarks: {existing_trademarks}")
+                print(f"Existing trademarks unsame: {existing_trademarks_unsame}")
 
                 for existing_trademark in existing_trademarks:
                     conflict = compare_trademarks(
@@ -651,50 +647,6 @@ if uploaded_files:
                                 for run in paragraph.runs:
                                     run.font.size = Pt(10)
 
-                def add_conflict_paragraph(document, conflict):
-                    p = document.add_paragraph(
-                        f"Trademark Name : {conflict.get('Trademark name', 'N/A')}"
-                    )
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p.paragraph_format.space_after = Pt(0)
-                    p = document.add_paragraph(
-                        f"Trademark Status : {conflict.get('Trademark Status', 'N/A')}"
-                    )
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p.paragraph_format.space_after = Pt(0)
-                    p = document.add_paragraph(
-                        f"Trademark Owner : {conflict.get('Trademark Owner', 'N/A')}"
-                    )
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p.paragraph_format.space_after = Pt(0)
-                    p = document.add_paragraph(
-                        f"Trademark Class Number : {conflict.get('Trademark class Number', 'N/A')}"
-                    )
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p.paragraph_format.space_after = Pt(0)
-                    p = document.add_paragraph(
-                        f"Trademark serial number : {conflict.get('Trademark serial number', 'N/A')}"
-                    )
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p.paragraph_format.space_after = Pt(0)
-                    p = document.add_paragraph(
-                        f"Trademark registration number : {conflict.get('Trademark registration number', 'N/A')}"
-                    )
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p.paragraph_format.space_after = Pt(0)
-                    p = document.add_paragraph(
-                        f"Trademark Design phrase : {conflict.get('Trademark design phrase', 'N/A')}"
-                    )
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p.paragraph_format.space_after = Pt(0)
-                    p = document.add_paragraph(" ")
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p.paragraph_format.space_after = Pt(0)
-                    p = document.add_paragraph(f"{conflict.get('reasoning','N/A')}\n")
-                    p.paragraph_format.line_spacing = Pt(18)
-                    p = document.add_paragraph(" ")
-                    p.paragraph_format.line_spacing = Pt(18)
-
                 if len(high_conflicts) > 0:
                     document.add_heading(
                         "Explanation: Trademarks with 3 conditions satisfied:", level=2
@@ -730,34 +682,6 @@ if uploaded_files:
                     p.paragraph_format.line_spacing = Pt(18)
                     for conflict in low_conflicts:
                         add_conflict_paragraph(document, conflict)
-
-                def add_conflict_paragraph_to_array(conflict):
-                    result = []
-                    result.append(
-                        f"Trademark Name : {conflict.get('Trademark name', 'N/A')}"
-                    )
-                    result.append(
-                        f"Trademark Status : {conflict.get('Trademark Status', 'N/A')}"
-                    )
-                    result.append(
-                        f"Trademark Owner : {conflict.get('Trademark Owner', 'N/A')}"
-                    )
-                    result.append(
-                        f"Trademark Class Number : {conflict.get('Trademark class Number', 'N/A')}"
-                    )
-                    result.append(
-                        f"Trademark serial number : {conflict.get('Trademark serial number', 'N/A')}"
-                    )
-                    result.append(
-                        f"Trademark registration number : {conflict.get('Trademark registration number', 'N/A')}"
-                    )
-                    result.append(
-                        f"Trademark Design phrase : {conflict.get('Trademark design phrase', 'N/A')}"
-                    )
-                    result.append(" ")  # Blank line for spacing
-                    result.append(f"{conflict.get('reasoning', 'N/A')}\n")
-                    result.append(" ")  # Blank line for spacing
-                    return result
 
                 conflicts_array = []
 

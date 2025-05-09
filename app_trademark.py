@@ -1752,13 +1752,15 @@ STEP 2: IDENTICAL MARK ANALYSIS
 - Compare the prominent words in each mark
 - Clearly state `class_match` and `goods_services_match` values
 
-STEP 3: ONE/TWO LETTER ANALYSIS
-- Identify marks with only ONE or TWO letter differences (substitution, addition, deletion)
-- For each mark, first identify the prominent words
-- Document class and goods/services matching
-- Analyze whether the prominent words are affected by these letter differences
+STEP 3: One Letter Difference Analysis  
+    - Identify marks with only ONE letter difference (substitution, addition, or deletion).  
+    - For each, determine whether there's a `class_match` and `goods_services_match`.
+    
+STEP 4: Two Letter Difference Analysis  
+    - Identify marks that differ by exactly TWO letters (substitution, addition, deletion, or a mix).  
+    - For each, indicate `class_match` and `goods_services_match`.
 
-STEP 4: SIMILAR MARK ANALYSIS
+STEP 5: SIMILAR MARK ANALYSIS
 - For each potentially similar mark, first identify the prominent words
 - Only then analyze for phonetic, semantic, or functional similarity based on these prominent words
 - PAY SPECIAL ATTENTION to marks with the same prominent words
@@ -1768,7 +1770,7 @@ STEP 4: SIMILAR MARK ANALYSIS
 - Explicitly note when prominent words match between marks
 - Justify the type of similarity and assess `class_match` and `goods_services_match`
 
-STEP 5: CROWDED FIELD ANALYSIS
+STEP 6: CROWDED FIELD ANALYSIS
 - Count the total number of potentially conflicting marks identified
 - Calculate what percentage have DIFFERENT owners
 - Determine if the field is "crowded" (over 50% different owners)

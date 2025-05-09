@@ -2,7 +2,7 @@ from typing import Tuple
 from sentence_transformers import SentenceTransformer, util
 from fuzzywuzzy import fuzz
 import torch
-from .text_processing import levenshtein_distance
+from utils.text_processing import levenshtein_distance
 import cv2
 import numpy as np
 import base64
@@ -40,28 +40,23 @@ def ml_phonetic_match(name1: str, name2: str) -> Tuple[float, bool]:
     return ratio / 100.0, is_match
 
 
-def is_semantically_equivalent(name1: str, name2: str, threshold: float = 0.90) -> bool:
-    """
-    Check if two names are semantically equivalent using ML
-    """
-    similarity, _ = ml_semantic_match(name1, name2)
-    return similarity >= threshold
+# Helper function for semantic equivalence
+def is_semantically_equivalent(name1, name2, threshold=0.90):
+    embeddings1 = semantic_model.encode(name1, convert_to_tensor=True)
+    embeddings2 = semantic_model.encode(name2, convert_to_tensor=True)
+    similarity_score = util.cos_sim(embeddings1, embeddings2).item()
+    return similarity_score >= threshold
+
+    # Helper function for phonetic equivalence
 
 
-def is_phonetically_equivalent(name1: str, name2: str, threshold: float = 90) -> bool:
-    """
-    Check if two names are phonetically equivalent using ML
-    """
-    similarity, _ = ml_phonetic_match(name1, name2)
-    return similarity * 100 >= threshold
+def is_phonetically_equivalent(name1, name2, threshold=90):
+    return fuzz.ratio(name1.lower(), name2.lower()) >= threshold
+
+    # Helper function for phonetically equivalent words
 
 
-def first_words_phonetically_equivalent(
-    existing_name: str, proposed_name: str, threshold: float = 90
-) -> bool:
-    """
-    Check if the first words of two names are phonetically equivalent
-    """
+def first_words_phonetically_equivalent(existing_name, proposed_name, threshold=90):
     existing_words = existing_name.lower().split()
     proposed_words = proposed_name.lower().split()
     if len(existing_words) < 2 or len(proposed_words) < 2:

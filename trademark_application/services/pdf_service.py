@@ -1,7 +1,7 @@
 import fitz
 from typing import List
 from PIL import Image
-from ..config.settings import MAX_TOKENS_PER_CHUNK, EXCLUDE_HEADER_FOOTER
+from config.settings import MAX_TOKENS_PER_CHUNK, EXCLUDE_HEADER_FOOTER
 
 
 def read_pdf(

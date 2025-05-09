@@ -1,11 +1,8 @@
 import fitz
 from typing import Dict, List, Union
 import re
-from ..models.trademark import TrademarkDetails
-from ..utils.validation import is_correct_format_code1, is_correct_format_code2
-from ..utils.text_processing import preprocess_text, find_class_numbers
-from ..config.settings import get_azure_client
-import streamlit as st
+from utils.text_processing import preprocess_text, find_class_numbers
+from config.settings import get_azure_client
 
 
 def extract_trademark_details_code1(

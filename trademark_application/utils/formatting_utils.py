@@ -1,7 +1,42 @@
 from typing import Dict, Any
 import json
 import re
-from ..config.settings import get_azure_client
+from config.settings import get_azure_client
+import ast
+from typing import List
+
+
+def list_conversion(proposed_class: str) -> List[int]:
+
+    client = get_azure_client()
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant for converting the class number string into python list of numbers.\n Respond only with python list. Example : [18,35]",
+        },
+        {
+            "role": "user",
+            "content": "The class number are: 15,89. convert the string into python list of numbers.",
+        },
+        {"role": "assistant", "content": "[15,89]"},
+        {
+            "role": "user",
+            "content": f"The class number are: {proposed_class}. convert the string into python list of numbers.",
+        },
+    ]
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=messages,
+        temperature=0,
+        max_tokens=150,
+    )
+
+    lst_class = response.choices[0].message.content
+    class_value = ast.literal_eval(lst_class)
+
+    return class_value
 
 
 def clean_and_format_opinion(

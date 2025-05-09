@@ -17,6 +17,17 @@ def preprocess_text(text: str) -> str:
     return text
 
 
+def normalize_text_name(text):
+    """Normalize text by converting to lowercase, removing special characters, and standardizing whitespace."""
+    # Remove punctuation except hyphens and spaces
+    # text = re.sub(r"[^\w\s-’]", "", text)
+    # Convert to lowercase
+    text = re.sub(r"’", " ", text)
+    text = text.lower()
+    # Standardize whitespace
+    return " ".join(text.split())
+
+
 def normalize_text(text: str) -> str:
     """Normalize text for comparison"""
     # Replace special hyphen-like characters with a standard hyphen
@@ -141,37 +152,63 @@ def list_conversion(proposed_class: str) -> List[int]:
 
 
 def find_class_numbers(goods_services: str) -> List[int]:
-    """Find class numbers in goods/services description using GPT"""
-    try:
-        azure_endpoint = os.getenv("AZURE_ENDPOINT")
-        api_key = os.getenv("AZURE_API_KEY")
+    """Use LLM to find the international class numbers based on goods & services"""
+    # Initialize AzureChatOpenAI
 
-        client = AzureOpenAI(
-            azure_endpoint=azure_endpoint,
-            api_key=api_key,
-            api_version="2024-10-01-preview",
-        )
+    azure_endpoint = os.getenv("AZURE_ENDPOINT")
+    api_key = os.getenv("AZURE_API_KEY")
 
-        messages = [
-            {
-                "role": "system",
-                "content": "You are a helpful assistant for finding the International class number of provided Goods & Services.",
-            },
-            {
-                "role": "user",
-                "content": f"The goods/services are: {goods_services}. Find the international class numbers.",
-            },
-        ]
+    client = AzureOpenAI(
+        azure_endpoint=azure_endpoint,
+        api_key=api_key,
+        api_version="2024-10-01-preview",
+    )
 
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=messages,
-            temperature=0.5,
-            max_tokens=150,
-        )
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant for finding the International class number of provided Goods & Services.",
+        },
+        {
+            "role": "user",
+            "content": "The goods/services are: IC 003: SKIN CARE PREPARATIONS; COSMETICS; BABY CARE PRODUCTS, NAMELY, SKIN SOAPS, BABY WASH, BABY BUBBLE BATH, BABY LOTIONS, BABY SHAMPOOS; SKIN CLEANSERS; BABY WIPES; NON− MEDICATED DIAPER RASH OINTMENTS AND LOTIONS; SKIN LOTIONS, CREAMS, MOISTURIZERS, AND OILS; BODY WASH; BODY SOAP; DEODORANTS; PERFUME; HAIR CARE PREPARATIONS. Find the international class numbers.",
+        },
+        {"role": "assistant", "content": "The international class numbers : 03"},
+        {
+            "role": "user",
+            "content": "The goods/services are: LUGGAGE AND CARRYING BAGS; SUITCASES, TRUNKS, TRAVELLING BAGS, SLING BAGS FOR CARRYING INFANTS, SCHOOL BAGS; PURSES; WALLETS; RETAIL AND ONLINE RETAIL SERVICES. Find the international class numbers.",
+        },
+        {"role": "assistant", "content": "The international class numbers : 18,35"},
+        {
+            "role": "user",
+            "content": "The goods/services are: CLASS 3: ANTIPERSPIRANTS AND DEODORANTS. (PLEASE INCLUDE CLASSES 5 AND 35 IN THE SEARCH SCOPE). Find the international class numbers.",
+        },
+        {"role": "assistant", "content": "The international class numbers : 03,05,35"},
+        {
+            "role": "user",
+            "content": "The goods/services are: VITAMIN AND MINERAL SUPPLEMENTS. Find the international class numbers.",
+        },
+        {"role": "assistant", "content": "The international class numbers : 05"},
+        {
+            "role": "user",
+            "content": f"The goods/services are: {goods_services}. Find the international class numbers.",
+        },
+    ]
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=messages,
+        temperature=0.5,
+        max_tokens=150,
+    )
 
-        class_numbers_str = response.choices[0].message.content
-        class_numbers = re.findall(r"(?<!\d)\d{2}(?!\d)", class_numbers_str)
-        return [int(num) for num in set(class_numbers)]
-    except Exception:
-        return []
+    class_numbers_str = response.choices[0].message.content
+
+    # Extracting class numbers and removing duplicates
+    class_numbers = re.findall(
+        r"(?<!\d)\d{2}(?!\d)", class_numbers_str
+    )  # Look for two-digit numbers
+    class_numbers = ",".join(
+        set(class_numbers)
+    )  # Convert to set to remove duplicates, then join into a single string
+
+    return class_numbers

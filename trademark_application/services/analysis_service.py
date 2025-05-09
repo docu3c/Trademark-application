@@ -1,9 +1,9 @@
 from typing import Dict, List, Any
 import json, re
-from ..config.settings import get_azure_client
-from ..utils.validation import validate_trademark_relevance
-from ..utils.ml_utils import consistency_check, component_consistency_check
-from ..utils.formatting_utils import (
+from config.settings import get_azure_client
+from utils.validation import validate_trademark_relevance
+from utils.ml_utils import consistency_check, component_consistency_check
+from utils.formatting_utils import (
     clean_and_format_opinion,
     format_comprehensive_opinion,
 )
@@ -52,36 +52,73 @@ Analyze proposed trademark conflicts using these precise steps:
 1. COORDINATED CLASS ANALYSIS:
    - Identify classes related to the proposed goods/services
    - Justify each coordinated class with direct commercial links
+   - Consider channels of trade, target consumers, and common industry practices
+   - Provide detailed justification for each coordinated class
 
 2. IDENTICAL MARK ANALYSIS:
-   - Find exact character matches to proposed mark
-   - Determine class match and goods/services overlap
-   - For each trademark (proposed and conflicts), identify the prominent word(s):
-     * The most distinctive or unique word in a multi-word mark
-     * Words that create the strongest commercial impression
-     * Words that consumers would likely remember or use to identify the product
-     * Usually NOT common descriptive terms or articles (a, the, an)
-   - Examples: 
-     * In "Long Live Hair" - "Long Live" is prominent (distinctive phrase)
-     * In "Hair Genius" - "Genius" is prominent (more distinctive than "Hair")
-     * In "Alpha Brain Smart Gummies" - "Alpha Brain" is prominent (brand element)
-   - Compare the prominent words in each mark
+   - Include here if proposed mark and conflict mark have the exact same name
+   - For each identical mark, specify:
+     * class_match (True if in same or coordinated class)
+     * goods_services_match (True if goods/services are similar/related/overlapping)
 
-3. ONE/TWO LETTER ANALYSIS:
-   - Identify marks with 1-2 letter differences
-   - Document class and goods/services matching
-   - Analyze if the prominent words are affected by these letter differences
+3. ONE LETTER DIFFERENCE ANALYSIS:
+   - Identify marks with only ONE letter difference (substitution, addition, or deletion)
+   - For each mark, specify:
+     * class_match (True if in same or coordinated class)
+     * goods_services_match (True if goods/services are similar/related/overlapping)
+     * Type of letter variation (substitution, addition, deletion)
 
-4. SIMILAR MARK ANALYSIS:
-   - First identify prominent words in both proposed and conflict marks
-   - Then analyze marks for phonetic, semantic, or functional similarity based on their prominent words
-   - PAY SPECIAL ATTENTION to marks with the same prominent words
-   - Document similarity type and matching criteria
-   - Explicitly note when prominent words match between marks
+4. TWO LETTER DIFFERENCE ANALYSIS:
+   - Identify marks that differ by exactly TWO letters (substitution, addition, deletion, or a mix)
+   - For each mark, specify:
+     * class_match (True if in same or coordinated class)
+     * goods_services_match (True if goods/services are similar/related/overlapping)
+     * Type of letter variation (TWO_SUBSTITUTIONS|TWO_ADDITIONS|TWO_DELETIONS|MIXED)
 
-5. CROWDED FIELD:
-   - Calculate percentage of conflicting marks with different owners
+5. SIMILAR MARK ANALYSIS (CRITICAL ASSESSMENT):
+   a) PROMINENT WORD ANALYSIS (FIRST SUBSTEP):
+      - For each potentially similar mark, FIRST identify the prominent word(s):
+        * The most distinctive or unique word in a multi-word mark
+
+      Examples of prominent word identification:
+      * In "Long Live Hair" - "Long Live" is prominent (distinctive phrase)
+      * In "Hair Genius" - "Genius" is prominent (more distinctive than "Hair")
+      * In "Black Marsmallow" - "Marsmallow" is prominent
+      * In "Alpha Brain Smart Gummies" - "Alpha Brain" is prominent (brand element)
+      * In "Natural Beauty Cream" - "Beauty" is NOT prominent (descriptive term)
+      * In "Organic Food Market" - "Organic" is NOT prominent (generic term)
+      * Consider Plural Forms: "Grip" and "Grips" are considered different words
+
+   b) SIMILARITY ANALYSIS (SECOND SUBSTEP):
+      - ONLY proceed with similarity analysis if prominent words match between marks
+      - If prominent words don't match, mark as NOT similar
+      - For matching prominent words, analyze:
+        * Phonetic Similarity (Sound):
+          - Evaluate how trademarks sound when pronounced naturally
+          - Analyze similarities in rhythm, cadence, syllable count/stress
+          - Focus on marks sharing dominant or memorable sound patterns
+          - Consider variations in word combination (e.g., "COLORGRIP" vs. "COLOR GRIP")
+          - Detect phonetic similarity where word structures differ
+        
+        * Semantic Similarity (Meaning/Concept):
+          - Examine inherent meanings, connotations, and commercial impressions
+          - Identify marks suggesting same or similar concepts
+          - Look for marks creating analogous mental associations
+          - Consider combined words (e.g., "COLORGRIP" and "COLOR HOLD" both imply color retention)
+          - For multi-word marks, search for ALL essential components
+
+   c) For each similar mark, specify:
+      * class_match (True if in same or coordinated class)
+      * goods_services_match (True if goods/services are similar/related/overlapping)
+      * Similarity type (Phonetic, Semantic, Commercial Impression, or combination)
+      * Prominent word match status
+      * Detailed reasoning for similarity determination
+
+6. CROWDED FIELD ANALYSIS:
+   - Count only marks that passed prominent word analysis
+   - Calculate percentage with DIFFERENT owners
    - Determine crowded field status (>50% different owners)
+   - Explain practical implications on trademark protection scope
 
 FORMAT RESPONSE IN JSON:
 {
@@ -90,7 +127,6 @@ FORMAT RESPONSE IN JSON:
   "identical_marks": [
     {
       "mark": "[NAME]",
-      "prominent_words": ["[WORD1]", "[WORD2]"],
       "owner": "[OWNER]",
       "goods_services": "[DESCRIPTION]",
       "status": "[STATUS]",
@@ -99,26 +135,50 @@ FORMAT RESPONSE IN JSON:
       "goods_services_match": true|false
     }
   ],
-  "one_letter_marks": [...similar structure with prominent_words...],
-  "two_letter_marks": [...similar structure with prominent_words...],
-  "similar_marks": [
+  "one_letter_marks": [
     {
       "mark": "[NAME]",
-      "prominent_words": ["[WORD1]", "[WORD2]"],
       "owner": "[OWNER]",
       "goods_services": "[DESCRIPTION]",
       "status": "[STATUS]",
       "class": "[CLASS]",
-      "similarity_type": "[TYPE]",
-      "prominent_word_match": true|false,
       "class_match": true|false,
-      "goods_services_match": true|false
+      "goods_services_match": true|false,
+      "letter_variation": "[SUBSTITUTION|ADDITION|DELETION]"
+    }
+  ],
+  "two_letter_marks": [
+    {
+      "mark": "[NAME]",
+      "owner": "[OWNER]",
+      "goods_services": "[DESCRIPTION]",
+      "status": "[STATUS]",
+      "class": "[CLASS]",
+      "class_match": true|false,
+      "goods_services_match": true|false,
+      "letter_variation": "[TWO_SUBSTITUTIONS|TWO_ADDITIONS|TWO_DELETIONS|MIXED]"
+    }
+  ],
+  "similar_marks": [
+    {
+      "mark": "[NAME]",
+      "prominent_words": ["[WORD1]", "[WORD2]"],
+      "prominent_word_match": true|false,
+      "similarity_type": "[PHONETIC|SEMANTIC|COMMERCIAL|COMBINATION]",
+      "owner": "[OWNER]",
+      "goods_services": "[DESCRIPTION]",
+      "status": "[STATUS]",
+      "class": "[CLASS]",
+      "class_match": true|false,
+      "goods_services_match": true|false,
+      "similarity_reasoning": "[DETAILED EXPLANATION]"
     }
   ],
   "crowded_field": {
     "is_crowded": true|false,
     "percentage": [PERCENTAGE],
-    "explanation": "[BRIEF EXPLANATION]"
+    "explanation": "[BRIEF EXPLANATION]",
+    "protection_implications": "[EXPLANATION OF IMPACT ON TRADEMARK PROTECTION]"
   }
 }
 """
@@ -140,50 +200,35 @@ STEP 1: COORDINATED CLASS ANALYSIS
 - Provide a complete list of all relevant classes for conflict analysis
 
 STEP 2: IDENTICAL MARK ANALYSIS
-- Find exact character matches to the proposed mark "{mark}" (case-insensitive)
-- For each mark, first identify the prominent words:
-  * Most distinctive or unique words in the mark
-  * Words that create the strongest commercial impression
-  * Words consumers would likely remember or use to identify the product
-  * NOT common descriptive terms or articles (a, the, an)
-- Then determine:
-  * Is it in the SAME class?
-  * Is it in a COORDINATED class (from Step 1)?
-  * Are the goods/services related or overlapping?
-- Compare the prominent words in each mark
-- Clearly state `class_match` and `goods_services_match` values
+- Find exact character matches to "{mark}" (case-insensitive)
+  * Document class and goods/services matching
 
-STEP 3: ONE/TWO LETTER ANALYSIS
-- Identify marks with only ONE or TWO letter differences (substitution, addition, deletion)
-- For each mark, first identify the prominent words
-- Document class and goods/services matching
-- Analyze whether the prominent words are affected by these letter differences
+STEP 3: One Letter Difference Analysis  
+    - Identify marks with only ONE letter difference (substitution, addition, or deletion).  
+    - For each, determine whether there's a `class_match` and `goods_services_match`.
+    
+STEP 4: Two Letter Difference Analysis  
+    - Identify marks that differ by exactly TWO letters (substitution, addition, deletion, or a mix).  
+    - For each, indicate `class_match` and `goods_services_match`.
 
-STEP 4: SIMILAR MARK ANALYSIS
-- For each potentially similar mark, first identify the prominent words
-- Only then analyze for phonetic, semantic, or functional similarity based on these prominent words
-- PAY SPECIAL ATTENTION to marks with the same prominent words
-- Look for phonetic similarities (e.g., "CLEAR"/"KLEER", "GRIP"/"HOLD")
-- For compound marks (e.g., "COLORGRIP" vs "COLOR GRIP"), identify all variants
-- Look for marks where components are arranged differently but mean the same thing
-- Explicitly note when prominent words match between marks
-- Justify the type of similarity and assess `class_match` and `goods_services_match`
+STEP 5: SIMILAR MARK ANALYSIS
+- For each potentially similar mark:
+  * FIRST identify prominent words
+  * ONLY if prominent words match, then analyze other words
+  * If prominent words don't match, mark as NOT similar
+  * For matching prominent words, analyze:
+    - Phonetic similarity of other words
+    - Semantic similarity of other words
+    - Functional similarity of other words
+  * Document similarity type and matching criteria
 
-STEP 5: CROWDED FIELD ANALYSIS
-- Count the total number of potentially conflicting marks identified
-- Calculate what percentage have DIFFERENT owners
-- Determine if the field is "crowded" (over 50% different owners)
-- Explain trademark protection implications in a crowded field context
+STEP 6: CROWDED FIELD ANALYSIS
+- Count only marks that passed prominent word analysis
+- Calculate percentage with DIFFERENT owners
+- Determine if field is "crowded" (>50% different owners)
+- Explain trademark protection implications
 
 FORMAT RESPONSE IN JSON as specified in the instructions.
-
-IMPORTANT REMINDERS:
-- Always include prominent words for every mark as part of your analysis
-- Prominent word identification is a crucial substep for ALL similarity analyses
-- For `class_match`: Mark as True if in class "{class_number}" OR in a coordinated class
-- For `goods_services_match`: Compare directly to the proposed goods/services
-- Ensure letter difference analysis is exact (i.e., exactly one or two letters)
-- In Similar Mark Analysis, explicitly label the similarity type and note prominent word matches
 """
 
     try:
@@ -304,7 +349,7 @@ You **must** identify not only exact class matches but also any coordinated or r
 - **Health/Beauty**: 3, 5, 44  
 - **Entertainment**: 9, 41, 42
 
-You are expected to go **beyond** this list and apply expert reasoning based on the proposed trademark’s actual goods/services. Clearly explain **why** the identified classes are relevant.
+You are expected to go **beyond** this list and apply expert reasoning based on the proposed trademark's actual goods/services. Clearly explain **why** the identified classes are relevant.
 
 ⚠️ KEY REMINDERS:
 - If ANY component appears in ANY other class—even outside the exact class—it must be flagged.
