@@ -89,10 +89,12 @@ Analyze proposed trademark conflicts using these precise steps:
       * In "Organic Food Market" - "Organic" is NOT prominent (generic term)
       * Consider Plural Forms: "Grip" and "Grips" are considered different words
 
+      So for example, if the proposed mark is "Alpha Brain Smart Gummies" and the conflict mark is "Alpha Brain Smart Gummies", then the prominent word is "Alpha Brain", Since the prominent word is the same, then we proceed with similarity analysis for other words
+
    b) SIMILARITY ANALYSIS (SECOND SUBSTEP):
       - ONLY proceed with similarity analysis if prominent words match between marks
       - If prominent words don't match, mark as NOT similar
-      - For matching prominent words, analyze:
+      - If Prominent words match, then proceed with similarity analysis for other words
         * Phonetic Similarity (Sound):
           - Evaluate how trademarks sound when pronounced naturally
           - Analyze similarities in rhythm, cadence, syllable count/stress

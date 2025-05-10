@@ -1,5 +1,9 @@
 # Version - 6.1  (Code Updated of Checking for Non-matching Class number == GPT 4o mini)
 
+import os
+
+os.environ["STREAMLIT_SERVER_WATCH_DIRS"] = "false"
+
 from fileinput import filename
 import time, os
 import streamlit as st
@@ -1541,10 +1545,10 @@ import re
 
 def get_azure_client():
     """Initialize and return the Azure OpenAI client."""
-    # azure_endpoint = os.getenv("AZURE_ENDPOINT")
-    # api_key = os.getenv("AZURE_API_KEY")
-    azure_endpoint = st.secrets["AZURE_ENDPOINT"]
-    api_key = st.secrets["AZURE_API_KEY"]
+    azure_endpoint = os.getenv("AZURE_ENDPOINT")
+    api_key = os.getenv("AZURE_API_KEY")
+    # azure_endpoint = st.secrets["AZURE_ENDPOINT"]
+    # api_key = st.secrets["AZURE_API_KEY"]
 
     client = AzureOpenAI(
         azure_endpoint=azure_endpoint,

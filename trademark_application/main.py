@@ -1,3 +1,7 @@
+import os
+
+os.environ["STREAMLIT_SERVER_WATCH_DIRS"] = "false"
+
 import streamlit as st
 import time
 import base64
