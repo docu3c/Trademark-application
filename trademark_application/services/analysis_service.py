@@ -49,36 +49,34 @@ def section_one_analysis(mark, class_number, goods_services, relevant_conflicts)
     system_prompt = """
 Analyze proposed trademark conflicts using these precise steps:
 
-1. COORDINATED CLASS ANALYSIS:
-   - Identify classes related to the proposed goods/services
-   - Justify each coordinated class with direct commercial links
-   - Consider channels of trade, target consumers, and common industry practices
-   - Provide detailed justification for each coordinated class
+STEP 1 - COORDINATED CLASS ANALYSIS:
+   a) Thoroughly analyze the scope and nature of the proposed goods/services: "{goods_services}".
+   b) Identify all additional trademark classes that are commercially related, complementary, or likely to be perceived by consumers as coordinated with the primary class {class_number}. Consider channels of trade, target consumers, and common industry practices.
+   c) Provide a detailed, specific justification for including each coordinated class, explaining the commercial or conceptual link to the primary class and proposed goods/services.
+   d) Produce a definitive list comprising the primary class and all justified coordinated classes relevant for the conflict assessment.
 
-2. IDENTICAL MARK ANALYSIS:
-   - Include here if proposed mark and conflict mark have the exact same name
-   - For each identical mark, specify:
-     * class_match (True if in same or coordinated class)
-     * goods_services_match (True if goods/services are similar/related/overlapping)
+2. STEP 2 - IDENTICAL MARK ANALYSIS:
+   - Compare the proposed mark "{mark}" with the conflict marks in the relevant classes
+   - Identify exact character matches to "{mark}"
+    For each identically matching mark found, critically assess:
+      - Does the mark reside in the exact SAME class ({class_number}) as the proposed mark?
+      - Is the mark registered in any of the COORDINATED classes identified in Step 1?
+      - Are the specific goods/services listed for the identical mark similar, related, competitive, or likely to overlap in the marketplace with the proposed goods/services ("{goods_services}")?
+   - Clearly specify the boolean `class_match` (True if in the same or coordinated class) and `goods_services_match` (True if goods/services are similar/related/overlapping) values for each identified identical mark. 
 
-3. ONE LETTER DIFFERENCE ANALYSIS:
-   - Identify marks with only ONE letter difference (substitution, addition, or deletion)
-   - For each mark, specify:
-     * class_match (True if in same or coordinated class)
-     * goods_services_match (True if goods/services are similar/related/overlapping)
-     * Type of letter variation (substitution, addition, deletion)
+3. STEP 3 - ONE LETTER DIFFERENCE ANALYSIS:
+   a) Identify all registered or pending trademarks within the relevant classes that differ from the proposed mark "{mark}" by precisely ONE letter.
+   b) This includes variations involving a single letter substitution (e.g., MARK vs. MORK), addition (e.g., MARK vs. MARKS), or deletion (e.g., MARK vs. MAK).
+   c) For each qualifying mark, specify the `class_match` and `goods_services_match` values, and explicitly state the type of single-letter variation observed.
 
-4. TWO LETTER DIFFERENCE ANALYSIS:
-   - Identify marks that differ by exactly TWO letters (substitution, addition, deletion, or a mix)
-   - For each mark, specify:
-     * class_match (True if in same or coordinated class)
-     * goods_services_match (True if goods/services are similar/related/overlapping)
-     * Type of letter variation (TWO_SUBSTITUTIONS|TWO_ADDITIONS|TWO_DELETIONS|MIXED)
+4. STEP 4 - TWO LETTER DIFFERENCE ANALYSIS:
+   a) Identify all registered or pending trademarks within the relevant classes that differ from the proposed mark "{mark}" by exactly TWO letters.
+   b) These differences can arise from two substitutions, two additions, two deletions, or any combination thereof (e.g., one substitution and one deletion).
+   c) For each qualifying mark, specify the `class_match` and `goods_services_match` values, and detail the nature of the two-letter variation.
 
-5. SIMILAR MARK ANALYSIS (CRITICAL ASSESSMENT):
+5. STEP 5 - SIMILAR MARK ANALYSIS (CRITICAL ASSESSMENT):
    a) PROMINENT WORD ANALYSIS (FIRST SUBSTEP):
-      - For each potentially similar mark, FIRST identify the prominent word(s):
-        * The most distinctive or unique word in a multi-word mark
+      - For the proposed mark "{mark}" and the conflict mark, identify the prominent word(s):
 
       Examples of prominent word identification:
       * In "Long Live Hair" - "Long Live" is prominent (distinctive phrase)
@@ -91,36 +89,43 @@ Analyze proposed trademark conflicts using these precise steps:
 
       So for example, if the proposed mark is "Alpha Brain Smart Gummies" and the conflict mark is "Alpha Brain Smart Gummies", then the prominent word is "Alpha Brain", Since the prominent word is the same, then we proceed with similarity analysis for other words
 
-   b) SIMILARITY ANALYSIS (SECOND SUBSTEP):
-      - ONLY proceed with similarity analysis if prominent words match between marks
-      - If prominent words don't match, mark as NOT similar
-      - If Prominent words match, then proceed with similarity analysis for other words
-        * Phonetic Similarity (Sound):
-          - Evaluate how trademarks sound when pronounced naturally
-          - Analyze similarities in rhythm, cadence, syllable count/stress
-          - Focus on marks sharing dominant or memorable sound patterns
-          - Consider variations in word combination (e.g., "COLORGRIP" vs. "COLOR GRIP")
-          - Detect phonetic similarity where word structures differ
-        
-        * Semantic Similarity (Meaning/Concept):
-          - Examine inherent meanings, connotations, and commercial impressions
-          - Identify marks suggesting same or similar concepts
-          - Look for marks creating analogous mental associations
-          - Consider combined words (e.g., "COLORGRIP" and "COLOR HOLD" both imply color retention)
-          - For multi-word marks, search for ALL essential components
+    b) Subsequently, conduct a multi-faceted analysis of these those marks which have the same prominent word as proposed mark "{mark}", considering:
+      - Phonetic Similarity (Sound):
+        1) Evaluate how the trademarks sound when pronounced naturally.
+        2) Analyze similarities in rhythm, cadence, syllable count/stress, vowel/consonant sounds, and overall auditory impression.
+        3) Focus on marks sharing dominant or memorable sound patterns with "{mark}".
+        4) Example: "FRESH BURST" and "COOL MINT FRESH STRIPS" share the core "FRESH" sound and convey similar energetic concepts ("BURST"/"STRIPS").
+        5) CRUCIAL: Identify phonetic similarities even when words are combined/separated differently (e.g., "COLORGRIP" vs. "COLOR GRIP", "COLOR-GRIP"). Consider variations like "COLOR HOLD" if phonetically close.
+        6) CRUCIAL: Detect phonetic similarity where word structures differ (e.g., "SMARTGUMMIES" vs. "SMART GUMMIES").
+      - Semantic Similarity (Meaning/Concept):
+        1) Examine the inherent meanings, connotations, ideas, and overall commercial impressions conveyed by the trademarks.
+        2) Identify marks that suggest the same or a very similar concept, quality, or characteristic, even using different terminology.
+        3) Look for marks creating analogous mental associations for consumers.
+        4) Example: "FRESH BURST" and "COOL MINT FRESH STRIPS" both semantically suggest a refreshing, intense product experience.
+        5) CRUCIAL: Identify semantic similarity arising from combined words (e.g., "COLORGRIP" and "COLOR HOLD" both imply color retention).
+        6) CRUCIAL: For multi-word proposed marks (e.g., "SMART GUMMIES"), actively search for existing marks containing ALL essential components ("SMART", "GUMMIES"), irrespective of order or intervening words.
+        7) Example: "Serene Moonstone" vs. "Serene House" (shared core concept "Serene").
+        8) Example: "Smooth Filter" vs. "SMOOTHHAIR", "SMOOTH APPEAL", "SMOOTH CARE" (shared core concept "Smooth").
+        9) Example: "Longliv" vs. "Long Live Summer" (similar meaning despite spelling).
+      - Commercial Impression (Overall Feel):
+        1) Assess the holistic impression the marks are likely to leave on the average consumer in the relevant market.
+        2) Consider the 'look and feel', memorability, and the overall message conveyed.
+        3) Evaluate if marks, despite literal differences, project a similar brand identity or market positioning.
+        4) Example: "FRESH BURST" and "COOL MINT FRESH STRIPS" both create an impression of dynamic, breath-freshening items.
+        5) CRUCIAL: Recognize similar commercial impressions created by variations in word combination or structure (e.g., "COLOR GRIP PRIMER" vs. "COLORGRIP").
+   c) Key Similarity Evaluation Factors:
+      1) Analyze the mark in its entirety, but give weight to dominant or distinctive elements.
+      2) Consider conceptually unified word combinations even if visually separated (e.g., hyphenated or spaced).
+      3) Account for variations in component word presentation (combined, separated, hyphenated).
+      4) For compound/multi-word marks, rigorously check for conflicts containing the same core components in any configuration.
+   d) For each mark deemed similar, provide a clear, explicit rationale explaining the basis for similarity (Phonetic, Semantic, Commercial Impression, or a combination).
+   e) For every similar mark, specify the `class_match` and `goods_services_match` values.
 
-   c) For each similar mark, specify:
-      * class_match (True if in same or coordinated class)
-      * goods_services_match (True if goods/services are similar/related/overlapping)
-      * Similarity type (Phonetic, Semantic, Commercial Impression, or combination)
-      * Prominent word match status
-      * Detailed reasoning for similarity determination
-
-6. CROWDED FIELD ANALYSIS:
+6. STEP 6 - CROWDED FIELD ANALYSIS:
    - Count only marks that passed prominent word analysis
    - Calculate percentage with DIFFERENT owners
    - Determine crowded field status (>50% different owners)
-   - Explain practical implications on trademark protection scope
+   - Explain practical implications on trademark protection scope available for the proposed mark "{mark}"
 
 FORMAT RESPONSE IN JSON:
 {
@@ -193,42 +198,7 @@ Goods/Services: {goods_services}
 Trademark Conflicts:
 {json.dumps(relevant_conflicts, indent=2)}
 
-Analyze ONLY Section I: Comprehensive Trademark Hit Analysis. Follow these precise steps:
 
-STEP 1: COORDINATED CLASS ANALYSIS
-- Carefully examine the proposed goods/services
-- Identify ALL classes related to the primary class "{class_number}"
-- Justify each coordinated class with direct commercial links
-- Provide a complete list of all relevant classes for conflict analysis
-
-STEP 2: IDENTICAL MARK ANALYSIS
-- Find exact character matches to "{mark}" (case-insensitive)
-  * Document class and goods/services matching
-
-STEP 3: One Letter Difference Analysis  
-    - Identify marks with only ONE letter difference (substitution, addition, or deletion).  
-    - For each, determine whether there's a `class_match` and `goods_services_match`.
-    
-STEP 4: Two Letter Difference Analysis  
-    - Identify marks that differ by exactly TWO letters (substitution, addition, deletion, or a mix).  
-    - For each, indicate `class_match` and `goods_services_match`.
-
-STEP 5: SIMILAR MARK ANALYSIS
-- For each potentially similar mark:
-  * FIRST identify prominent words
-  * ONLY if prominent words match, then analyze other words
-  * If prominent words don't match, mark as NOT similar
-  * For matching prominent words, analyze:
-    - Phonetic similarity of other words
-    - Semantic similarity of other words
-    - Functional similarity of other words
-  * Document similarity type and matching criteria
-
-STEP 6: CROWDED FIELD ANALYSIS
-- Count only marks that passed prominent word analysis
-- Calculate percentage with DIFFERENT owners
-- Determine if field is "crowded" (>50% different owners)
-- Explain trademark protection implications
 
 FORMAT RESPONSE IN JSON as specified in the instructions.
 """
@@ -521,6 +491,7 @@ def section_three_analysis(
     Returns:
         A structured risk assessment and summary
     """
+    print(f"Executing section_three_analysis")
     client = get_azure_client()
 
     # Check if we should skip Section Two analysis and directly set risk to medium-high

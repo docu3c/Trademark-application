@@ -11,6 +11,7 @@ def export_trademark_opinion_to_word(
     trademark_output: str, web_common_law_output: str = None
 ) -> str:
     """Export trademark opinion to Word document with proper formatting."""
+    print(f"Executing export_trademark_opinion_to_word")
     document = Document()
 
     # Add main title
@@ -38,6 +39,7 @@ def export_trademark_opinion_to_word(
 
 def process_opinion_content(document: Document, content: str) -> None:
     """Helper function to process opinion content with proper markdown conversion."""
+    print(f"Executing process_opinion_content")
     lines = content.split("\n")
     current_table = None
 
@@ -78,12 +80,14 @@ def process_opinion_content(document: Document, content: str) -> None:
 
 def format_cell_text(cell, text: str) -> None:
     """Format text in a table cell with markdown conversion."""
+    print(f"Executing format_cell_text")
     paragraph = cell.paragraphs[0]
     format_paragraph_text(paragraph, text)
 
 
 def format_paragraph_text(paragraph, text: str) -> None:
     """Parse and format paragraph text, handling markdown syntax."""
+    print(f"Executing format_paragraph_text")
     # Find all bold text segments (text between double asterisks)
     segments = []
     last_end = 0
@@ -113,6 +117,7 @@ def format_paragraph_text(paragraph, text: str) -> None:
 
 def add_conflict_paragraph(document: Document, conflict: Dict[str, Any]) -> None:
     """Add conflict details as paragraphs"""
+    print(f"Executing add_conflict_paragraph")
     fields = [
         ("Trademark Name", "trademark_name"),
         ("Trademark Status", "Trademark Status"),
@@ -145,6 +150,7 @@ def add_conflict_paragraph(document: Document, conflict: Dict[str, Any]) -> None
 
 def add_conflict_paragraph_to_array(conflict: Dict[str, Any]) -> List[str]:
     """Convert conflict details to array of strings"""
+    print(f"Executing add_conflict_paragraph_to_array")
     result = []
     fields = [
         ("Trademark Name", "trademark_name"),

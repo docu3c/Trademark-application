@@ -10,6 +10,7 @@ def read_pdf(
     """
     Read a PDF file and return its text content
     """
+    print(f"Executing read_pdf")
     doc = fitz.open(file_path)
     text = ""
 
@@ -39,6 +40,7 @@ def split_text(text: str, max_tokens: int = MAX_TOKENS_PER_CHUNK) -> List[str]:
     """
     Split text into chunks of maximum token size
     """
+    print(f"Executing split_text")
     # Simple splitting by sentences for now
     sentences = text.split(". ")
     chunks = []
@@ -67,6 +69,7 @@ def convert_pages_to_pil_images(
     """
     Convert PDF pages to PIL Images
     """
+    print(f"Executing convert_pages_to_pil_images")
     images = []
     for page_num in page_numbers:
         page = pdf_document.load_page(page_num)
@@ -82,6 +85,7 @@ def Web_CommonLaw_Overview_List(
     """
     Extract the page numbers for the 'Web Common Law Overview List' section.
     """
+    print(f"Executing Web_CommonLaw_Overview_List")
     pages_with_overview = []
     for i in range(start_page, min(start_page + 2, pdf_document.page_count)):
         page = pdf_document.load_page(i)

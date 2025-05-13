@@ -16,6 +16,7 @@ def detect_prominent_component_with_llm(
     Ask the LLM to pick out the 'prominent' (legally distinctive) component
     of a compound trademark. Returns a single word or short phrase in lowercase.
     """
+    print(f"Executing detect_prominent_component_with_llm")
     azure_endpoint = azure_endpoint or os.getenv("AZURE_ENDPOINT")
     api_key = api_key or os.getenv("AZURE_API_KEY")
 
@@ -64,6 +65,7 @@ def get_prominent_element(
     - 'first': first token
     - 'longest': the longest token
     """
+    print(f"Executing get_prominent_element")
     tokens = re.findall(r"\w+", mark)
     if not tokens:
         return mark.lower()

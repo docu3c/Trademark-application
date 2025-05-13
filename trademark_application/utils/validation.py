@@ -6,11 +6,13 @@ import json
 
 
 def is_correct_format_code1(page_text: str) -> bool:
+    print(f"Executing is_correct_format_code1")
     required_fields = ["Status:", "Goods/Services:"]
     return all(field in page_text for field in required_fields)
 
 
 def is_correct_format_code2(page_text: str) -> bool:
+    print(f"Executing is_correct_format_code2")
     required_fields = ["Register", "Nice Classes", "Goods & Services"]
     return all(field in page_text for field in required_fields)
 
@@ -19,6 +21,7 @@ def is_substring_match(name1: str, name2: str) -> bool:
     """
     Check if one name is a substring of another
     """
+    print(f"Executing is_substring_match")
     name1_lower = name1.lower()
     name2_lower = name2.lower()
     return name1_lower in name2_lower or name2_lower in name1_lower
@@ -28,6 +31,7 @@ def has_shared_word(name1: str, name2: str) -> bool:
     """
     Check if two names share any words
     """
+    print(f"Executing has_shared_word")
     words1 = set(name1.lower().split())
     words2 = set(name2.lower().split())
     return not words1.isdisjoint(words2)
@@ -39,6 +43,7 @@ def is_similar_goods_services(
     """
     Check if goods/services descriptions are similar using semantic similarity
     """
+    print(f"Executing is_similar_goods_services")
     # Initialize the model (consider moving this to a global scope or singleton)
     semantic_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
@@ -121,6 +126,7 @@ def validate_trademark_relevance(conflicts_array, proposed_goods_services):
         filtered_conflicts: List of relevant trademark conflicts
         excluded_count: Number of trademarks excluded
     """
+    print(f"Executing validate_trademark_relevance")
     # Parse conflicts_array if it's a string (assuming JSON format)
     if isinstance(conflicts_array, str):
         try:
@@ -199,5 +205,7 @@ def validate_trademark_relevance(conflicts_array, proposed_goods_services):
         else:
             # If no goods/services field, include it for safety
             relevant_conflicts.append(conflict)
+
+    print(f"relevant_conflicts:\n {(len(relevant_conflicts))}")
 
     return relevant_conflicts, excluded_count

@@ -9,6 +9,7 @@ def extract_trademark_details_code1(
     document_chunk: str,
 ) -> Dict[str, Union[str, List[int]]]:
     """Extract trademark details using format code 1"""
+    print(f"Executing extract_trademark_details_code1")
     try:
         client = get_azure_client()
         messages = [
@@ -230,6 +231,7 @@ def extract_design_phrase(
     document: str, start_page: int, pdf_document: fitz.Document
 ) -> str:
     """Extract design phrase from document"""
+    print(f"Executing extract_design_phrase")
     combined_texts = ""
     for i in range(start_page, min(start_page + 10, pdf_document.page_count)):
         page = pdf_document.load_page(i)

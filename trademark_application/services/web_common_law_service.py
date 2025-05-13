@@ -17,6 +17,7 @@ def web_law_page(document_path: str) -> List[Image.Image]:
     1. "Web Common Law Summary Page:" appears, or
     2. Both "Web Common Law Overview List" and "Record Nr." appear.
     """
+    print(f"Executing web_law_page")
     matching_pages = []  # List to store matching page numbers
 
     with fitz.open(document_path) as pdf_document:
@@ -51,6 +52,7 @@ def convert_pages_to_pil_images(
     pdf_document: fitz.Document, page_numbers: List[int]
 ) -> List[Image.Image]:
     """Convert PDF pages to PIL images."""
+    print(f"Executing convert_pages_to_pil_images")
     images = []
     for page_num in page_numbers:
         page = pdf_document.load_page(page_num - 1)
@@ -64,6 +66,7 @@ def extract_web_common_law(
     page_images: List[Image.Image], proposed_name: str
 ) -> List[dict]:
     """Extract web common law data from images."""
+    print(f"Executing extract_web_common_law")
     results = []
     for image in page_images:
         result = process_single_image(image, proposed_name)
@@ -76,6 +79,7 @@ def analyze_web_common_law(extracted_data: List[str], proposed_name: str) -> str
     Comprehensive analysis of web common law trademark data through three specialized stages.
     Returns a professional opinion formatted according to legal standards.
     """
+    print(f"Executing analyze_web_common_law")
     # Stage 1: Cited Term Analysis
     cited_term_analysis = section_four_analysis(extracted_data, proposed_name)
 
@@ -104,6 +108,7 @@ def section_four_analysis(extracted_data: List[str], proposed_name: str) -> str:
     """
     Perform Section IV: Comprehensive Cited Term Analysis
     """
+    print(f"Executing section_four_analysis")
     azure_endpoint = os.getenv(
         "AZURE_ENDPOINT",
     )
@@ -196,6 +201,7 @@ def section_five_analysis(extracted_data: List[str], proposed_name: str) -> str:
     Perform Section V: Component Analysis and Crowded Field Assessment
     (Skips entire section if identical hits exist in cited term analysis)
     """
+    print(f"Executing section_five_analysis")
     azure_endpoint = os.getenv("AZURE_ENDPOINT")
     api_key = os.getenv(
         "AZURE_API_KEY",
@@ -279,6 +285,7 @@ def section_six_analysis(
     - Skip crowded field analysis if identical hits exist
     - Risk levels only MEDIUM-HIGH or MEDIUM-LOW
     """
+    print(f"Executing section_six_analysis")
     azure_endpoint = os.getenv("AZURE_ENDPOINT")
     api_key = os.getenv(
         "AZURE_API_KEY",

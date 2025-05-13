@@ -10,6 +10,14 @@ import requests
 import os
 from PIL import Image
 import json
+from config.settings import (
+    SEMANTIC_SIMILARITY_THRESHOLD,
+    SEMANTIC_HIGH,
+    SEMANTIC_LOW,
+    PHONETIC_SIMILARITY_THRESHOLD,
+    PHONETIC_HIGH,
+    PHONETIC_LOW,
+)
 
 # Load the semantic similarity model with device specified during initialization
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,45 +26,64 @@ semantic_model = SentenceTransformer(
 )
 
 
-def ml_semantic_match(name1: str, name2: str) -> Tuple[float, bool]:
+def ml_semantic_match(name1: str, name2: str) -> Tuple[float, bool, str]:
     """
     Perform semantic matching between two trademark names using ML
-    Returns a tuple of (similarity_score, is_match)
+    Returns a tuple of (similarity_score, is_match, confidence)
     """
     embeddings1 = semantic_model.encode(name1, convert_to_tensor=True)
     embeddings2 = semantic_model.encode(name2, convert_to_tensor=True)
     similarity_score = util.cos_sim(embeddings1, embeddings2).item()
-    is_match = similarity_score >= 0.90
-    return similarity_score, is_match
+    print(f"Name1: {name1} and Name2: {name2} : Semantic Score: {similarity_score}\n")
+
+    # Determine match based on thresholds
+    if similarity_score >= SEMANTIC_HIGH:
+        return similarity_score, True, "high"
+    if similarity_score < SEMANTIC_LOW:
+        return similarity_score, False, "low"
+
+    # Borderline case
+    return similarity_score, False, "medium"
 
 
-def ml_phonetic_match(name1: str, name2: str) -> Tuple[float, bool]:
+def ml_phonetic_match(name1: str, name2: str) -> Tuple[float, bool, str]:
     """
     Perform phonetic matching between two trademark names using ML
-    Returns a tuple of (similarity_score, is_match)
+    Returns a tuple of (similarity_score, is_match, confidence)
     """
     ratio = fuzz.ratio(name1.lower(), name2.lower())
-    is_match = ratio >= 90
-    return ratio / 100.0, is_match
+    normalized_ratio = ratio / 100.0
+
+    # Determine match based on thresholds
+    print(f"Name1: {name1} and Name2: {name2} : Phonetic Ratio: {ratio}\n")
+    if ratio >= PHONETIC_HIGH:
+        return normalized_ratio, True, "high"
+    if ratio < PHONETIC_LOW:
+        return normalized_ratio, False, "low"
+
+    # Borderline case
+    return normalized_ratio, False, "medium"
 
 
 # Helper function for semantic equivalence
-def is_semantically_equivalent(name1, name2, threshold=0.90):
+def is_semantically_equivalent(name1, name2, threshold=SEMANTIC_SIMILARITY_THRESHOLD):
     embeddings1 = semantic_model.encode(name1, convert_to_tensor=True)
     embeddings2 = semantic_model.encode(name2, convert_to_tensor=True)
     similarity_score = util.cos_sim(embeddings1, embeddings2).item()
+    print(f"Name1: {name1} and Name2: {name2} : Semantic Score: {similarity_score}\n")
     return similarity_score >= threshold
 
-    # Helper function for phonetic equivalence
+
+def is_phonetically_equivalent(name1, name2, threshold=PHONETIC_SIMILARITY_THRESHOLD):
+    print(f"Executing is_phonetically_equivalent")
+    ratio = fuzz.ratio(name1.lower(), name2.lower())
+    print(f"Name1: {name1} and Name2: {name2} : Phonetic Ratio: {ratio}\n")
+    return ratio >= threshold
 
 
-def is_phonetically_equivalent(name1, name2, threshold=90):
-    return fuzz.ratio(name1.lower(), name2.lower()) >= threshold
-
-    # Helper function for phonetically equivalent words
-
-
-def first_words_phonetically_equivalent(existing_name, proposed_name, threshold=90):
+def first_words_phonetically_equivalent(
+    existing_name, proposed_name, threshold=PHONETIC_SIMILARITY_THRESHOLD
+):
     existing_words = existing_name.lower().split()
     proposed_words = proposed_name.lower().split()
     if len(existing_words) < 2 or len(proposed_words) < 2:
@@ -125,6 +152,7 @@ def component_consistency_check(mark, results):
     Returns:
         Validated and corrected component analysis results
     """
+    print(f"Executing component_consistency_check")
     corrected_results = results.copy()
 
     # Ensure coordinated classes exist
@@ -204,6 +232,7 @@ def component_consistency_check(mark, results):
 
 def encode_image(image: Image.Image) -> str:
     """Encode a PIL Image as Base64 string using OpenCV."""
+    print(f"Executing encode_image")
     image_np = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
     buffered = cv2.imencode(".jpg", image_np)[1]
     return base64.b64encode(buffered).decode("utf-8")

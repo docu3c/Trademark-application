@@ -7,7 +7,7 @@ from typing import List
 
 
 def list_conversion(proposed_class: str) -> List[int]:
-
+    print(f"Executing list_conversion")
     client = get_azure_client()
 
     messages = [
@@ -56,6 +56,7 @@ def clean_and_format_opinion(
     Returns:
         A cleaned, formatted, and optimized trademark opinion
     """
+    print(f"Executing clean_and_format_opinion")
     client = get_azure_client()
 
     system_prompt = """
@@ -217,6 +218,7 @@ Risk Category for Use:
 
 def format_comprehensive_opinion(opinion_structure: Dict[str, Any]) -> str:
     """Format the comprehensive opinion"""
+    print(f"Executing format_comprehensive_opinion")
     return f"""
     REFINED TRADEMARK OPINION: {opinion_structure['proposed_name']}
     Class: {opinion_structure['proposed_class']}

@@ -302,6 +302,15 @@ if uploaded_files:
                 existing_trademarks = parse_trademark_details(temp_file_path)
                 st.write(len(existing_trademarks))
 
+                # Add collapsible sections for debugging
+                with st.expander(
+                    "Debug: Existing Trademarks (Same Class)", expanded=False
+                ):
+                    st.write(
+                        "Number of trademarks in same class:", len(existing_trademarks)
+                    )
+                    st.json(existing_trademarks)
+
                 # PRAVEEN WEB COMMON LAW CODE START'S HERE-------------------------------------------------------------------------------------------------------------------------
 
                 # !!! Function used extract the web common law pages into images
@@ -347,6 +356,14 @@ if uploaded_files:
 
                 existing_trademarks = nfiltered_list
                 existing_trademarks_unsame = unsame_class_list
+                with st.expander(
+                    "Debug: Existing Trademarks (Different Class)", expanded=False
+                ):
+                    st.write(
+                        "Number of trademarks in different class:",
+                        len(existing_trademarks_unsame),
+                    )
+                    st.json(existing_trademarks_unsame)
 
                 high_conflicts = []
                 moderate_conflicts = []
@@ -412,7 +429,7 @@ if uploaded_files:
                 section.page_height = new_height
 
                 document.add_heading(
-                    f"Trademark Conflict List for {proposed_name} (VERSION - 6.9) :"
+                    f"Trademark Conflict List for {proposed_name} (VERSION - 7.0) :"
                 )
 
                 document.add_heading("Dashboard :", level=2)

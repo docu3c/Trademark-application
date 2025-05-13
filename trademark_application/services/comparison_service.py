@@ -1,5 +1,6 @@
 from typing import Dict, List, Union
 import json
+from config.settings import GOODS_SERVICES_SIMILARITY_THRESHOLD
 from utils.ml_utils import (
     is_semantically_equivalent,
     is_phonetically_equivalent,
@@ -22,6 +23,7 @@ def compare_trademarks(
     proposed_class: str,
     proposed_goods_services: str,
 ) -> Dict[str, Union[str, int]]:
+    print(f"Executing compare_trademarks")
     # Convert proposed classes to a list of integers
     proposed_classes = [int(c.strip()) for c in proposed_class.split(",")]
 
@@ -263,7 +265,9 @@ def validate_trademark_relevance(conflicts_array, proposed_goods_services):
     for conflict in conflicts:
         if "goods_services" in conflict:
             if is_similar_goods_services(
-                conflict["goods_services"], proposed_goods_services
+                conflict["goods_services"],
+                proposed_goods_services,
+                threshold=GOODS_SERVICES_SIMILARITY_THRESHOLD,
             ):
                 relevant_conflicts.append(conflict)
             else:
@@ -305,9 +309,9 @@ def assess_conflict(
     def normalize_text_name(text):
         """Normalize text by converting to lowercase, removing special characters, and standardizing whitespace."""
         # Remove punctuation except hyphens and spaces
-        # text = re.sub(r"[^\w\s-’]", "", text)
+        # text = re.sub(r"[^\w\s-']", "", text)
         # Convert to lowercase
-        text = re.sub(r"’", " ", text)
+        text = re.sub(r"'", " ", text)
         text = text.lower()
         # Standardize whitespace
         return " ".join(text.split())

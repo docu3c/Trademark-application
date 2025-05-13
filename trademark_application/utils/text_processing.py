@@ -12,6 +12,7 @@ nltk.download("omw-1.4")
 
 def preprocess_text(text: str) -> str:
     """Clean and standardize text"""
+    print(f"Executing preprocess_text")
     text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"[\u2013\u2014]", "-", text)
     return text
@@ -19,10 +20,11 @@ def preprocess_text(text: str) -> str:
 
 def normalize_text_name(text):
     """Normalize text by converting to lowercase, removing special characters, and standardizing whitespace."""
+    print(f"Executing normalize_text_name")
     # Remove punctuation except hyphens and spaces
-    # text = re.sub(r"[^\w\s-’]", "", text)
+    # text = re.sub(r"[^\w\s-']", "", text)
     # Convert to lowercase
-    text = re.sub(r"’", " ", text)
+    text = re.sub(r"'", " ", text)
     text = text.lower()
     # Standardize whitespace
     return " ".join(text.split())
@@ -86,6 +88,7 @@ def replace_disallowed_words(text: str) -> str:
 
 
 def levenshtein_distance(a: str, b: str) -> int:
+    print(f"Executing levenshtein_distance")
     if len(a) < len(b):
         return levenshtein_distance(b, a)
     if len(b) == 0:

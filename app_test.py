@@ -1355,101 +1355,186 @@ def get_azure_client():
     return client
 
 
-def validate_trademark_relevance(conflicts_array, proposed_goods_services):
+def parse_conflicts_array(conflicts_array):
     """
-    Pre-filter trademarks that don't have similar or identical goods/services
-    This function is implemented in code rather than relying on GPT
+    Parse the string-based conflicts array into a structured format.
 
     Args:
-        conflicts_array: List of trademark conflicts
-        proposed_goods_services: Goods/services of the proposed trademark
+        conflicts_array: List of strings containing trademark conflict information
 
     Returns:
-        filtered_conflicts: List of relevant trademark conflicts
-        excluded_count: Number of trademarks excluded
+        List of dictionaries containing structured trademark information
     """
-    # Parse conflicts_array if it's a string (assuming JSON format)
-    print("==STARTING TRADMARK PRE-FILTERING==")
+    print("==PARSING CONFLICTS ARRAY==")
+    structured_conflicts = []
+    current_conflict = {}
+
+    for line in conflicts_array:
+        print("==LINE==", line)
+        line = line.strip()
+        if not line:  # Skip empty lines
+            continue
+
+        if line.startswith("Trademark Name :"):
+            if current_conflict:  # Save previous conflict if exists
+                structured_conflicts.append(current_conflict)
+            current_conflict = {
+                "trademark_name": line.replace("Trademark Name :", "").strip()
+            }
+        elif line.startswith("Trademark Status :"):
+            current_conflict["status"] = line.replace("Trademark Status :", "").strip()
+        elif line.startswith("Trademark Owner :"):
+            current_conflict["owner"] = line.replace("Trademark Owner :", "").strip()
+        elif line.startswith("Trademark Class Number :"):
+            class_str = line.replace("Trademark Class Number : ", "").strip()
+            try:
+                current_conflict["class_number"] = class_str.replace("[", "").replace(
+                    "]", ""
+                )
+            except:
+                current_conflict["class_number"] = class_str
+        elif line.startswith("Trademark serial number :"):
+            current_conflict["serial_number"] = line.replace(
+                "Trademark serial number :", ""
+            ).strip()
+        elif line.startswith("Trademark registration number :"):
+            current_conflict["registration_number"] = line.replace(
+                "Trademark registration number :", ""
+            ).strip()
+        elif line.startswith("Trademark Design phrase :"):
+            current_conflict["design_phrase"] = line.replace(
+                "Trademark Design phrase :", ""
+            ).strip()
+        elif line.startswith("Condition"):
+            if "reasoning" not in current_conflict:
+                current_conflict["reasoning"] = []
+            current_conflict["reasoning"].append(line)
+
+    # Add the last conflict if exists
+    if current_conflict:
+        structured_conflicts.append(current_conflict)
+
+    print("COMPLETED PARSING CONFLICTS ARRAY")
+
+    return structured_conflicts
+
+
+def validate_trademark_relevance(
+    conflicts_array, proposed_goods_services, proposed_name
+):
+    """
+    Pre-filter trademarks using ML-based similarity scores and goods/services relevance.
+    Returns high confidence matches (>0.85) and borderline matches (0.75-0.85).
+
+    Args:
+        conflicts_array: List of trademark conflicts (can be string or list)
+        proposed_goods_services: Goods/services of the proposed trademark
+        proposed_name: Name of the proposed trademark
+
+    Returns:
+        dict: Contains high_confidence_matches, borderline_matches, and excluded_count
+    """
+    # Parse conflicts_array if it's a string
+    print("==VALIDATING TRADEMARK RELEVANCE==")
     if isinstance(conflicts_array, str):
+        print("==ISINSTANCE BLOCK==")
         try:
-            print("==PARSING CONFLICTS ARRAY==")
+            print("==TRY BLOCK==")
             conflicts = json.loads(conflicts_array)
         except json.JSONDecodeError:
-            # If it's not valid JSON, try to parse it as a list of dictionaries
-            conflicts = (
-                eval(conflicts_array) if conflicts_array.strip().startswith("[") else []
-            )
+            print("==EXCEPT BLOCK==")
+            conflicts = parse_conflicts_array(conflicts_array.split("\n"))
     else:
-        conflicts = conflicts_array
+        print("==ELSE BLOCK==")
+        conflicts = parse_conflicts_array(conflicts_array)
 
-    # Initialize lists for relevant and excluded trademarks
-    relevant_conflicts = []
+    # Initialize lists for different match categories
+    high_confidence_matches = []
+    borderline_matches = []
     excluded_count = 0
 
-    # Define a function to check similarity between goods/services
-    def is_similar_goods_services(existing_goods, proposed_goods):
-        # Convert to lowercase for case-insensitive comparison
-        existing_lower = existing_goods.lower()
-        proposed_lower = proposed_goods.lower()
+    def is_similar_goods_services(existing_goods_services, proposed_goods_services):
+        """Check if goods/services are similar enough to warrant analysis."""
+        # Convert to lowercase for comparison
+        existing = existing_goods_services.lower()
+        proposed = proposed_goods_services.lower()
 
         # Check for exact match
-        if existing_lower == proposed_lower:
+        if existing == proposed:
             return True
 
-        # Check if one contains the other
-        if existing_lower in proposed_lower or proposed_lower in existing_lower:
+        # Check for substring match
+        if existing in proposed or proposed in existing:
             return True
 
-        # Check for overlapping keywords
-        # Extract significant keywords from both descriptions
-        existing_keywords = set(re.findall(r"\b\w+\b", existing_lower))
-        proposed_keywords = set(re.findall(r"\b\w+\b", proposed_lower))
-
-        # Remove common stop words
+        # Remove common stop words and split into words
         stop_words = {
+            "the",
             "and",
             "or",
-            "the",
-            "a",
-            "an",
+            "for",
             "in",
             "on",
-            "for",
-            "of",
+            "at",
             "to",
+            "of",
             "with",
+            "by",
         }
-        existing_keywords = existing_keywords - stop_words
-        proposed_keywords = proposed_keywords - stop_words
+        existing_words = set(
+            word for word in existing.split() if word not in stop_words
+        )
+        proposed_words = set(
+            word for word in proposed.split() if word not in stop_words
+        )
 
-        # Calculate keyword overlap
-        if len(existing_keywords) > 0 and len(proposed_keywords) > 0:
-            overlap = len(existing_keywords.intersection(proposed_keywords))
-            overlap_ratio = overlap / min(
-                len(existing_keywords), len(proposed_keywords)
-            )
-
-            # If significant overlap (more than 30%), consider them similar
-            if overlap_ratio > 0.3:
-                return True
+        # Check for significant word overlap
+        overlap = existing_words.intersection(proposed_words)
+        if len(overlap) >= min(len(existing_words), len(proposed_words)) * 0.5:
+            return True
 
         return False
 
     # Process each conflict
     for conflict in conflicts:
-        # Ensure conflict has goods/services field
-        if "goods_services" in conflict:
-            if is_similar_goods_services(
-                conflict["goods_services"], proposed_goods_services
-            ):
-                relevant_conflicts.append(conflict)
-            else:
-                excluded_count += 1
-        else:
-            # If no goods/services field, include it for safety
-            relevant_conflicts.append(conflict)
+        # First check goods/services similarity
+        if not is_similar_goods_services(
+            conflict.get("goods_services", ""), proposed_goods_services
+        ):
+            excluded_count += 1
+            continue
+        print("==GOODS SERVICES SIMILARITY CHECK PASSED==\n")
+        # Calculate semantic and phonetic scores
+        semantic_score, semantic_match = ml_semantic_match(
+            proposed_name, conflict["trademark_name"]
+        )
+        print("==SEMANTIC MATCH CHECK PASSED==")
+        phonetic_score, phonetic_match = ml_phonetic_match(
+            proposed_name, conflict["trademark_name"]
+        )
+        print("==PHONETIC MATCH CHECK PASSED==\n")
 
-    return relevant_conflicts, excluded_count
+        # Categorize based on both semantic and phonetic scores
+        if semantic_score > 0.80 and phonetic_score > 0.85:
+            high_confidence_matches.append(conflict)
+        elif (semantic_score > 0.70 and semantic_score <= 0.80) or (
+            phonetic_score > 0.75 and phonetic_score <= 0.85
+        ):
+            borderline_matches.append(conflict)
+        else:
+            excluded_count += 1
+
+    # Print filtering results
+    print(f"\nFiltering Results:")
+    print(f"High Confidence Matches: {len(high_confidence_matches)}")
+    print(f"Borderline Matches: {len(borderline_matches)}")
+    print(f"Excluded Conflicts: {excluded_count}")
+
+    return {
+        "high_confidence_matches": high_confidence_matches,
+        "borderline_matches": borderline_matches,
+        "excluded_count": excluded_count,
+    }
 
 
 def filter_by_gpt_response(conflicts, gpt_json):
@@ -1772,18 +1857,20 @@ def ml_semantic_match(name1: str, name2: str) -> tuple:
     Returns tuple of (is_match, score, confidence)
     """
     # 1) Transformer cosine-score
+    print(f"==SEMANTIC MATCH== {name1} {name2}")
     emb1 = semantic_model.encode(name1, convert_to_tensor=True)
     emb2 = semantic_model.encode(name2, convert_to_tensor=True)
     score = util.cos_sim(emb1, emb2).item()
 
     # 2) Determine match based on thresholds
     if score >= SEM_HIGH:
-        return True, score, "high"
+        return score, "high"
     if score < SEM_LOW:
-        return False, score, "low"
+        return score, "low"
 
     # 3) Borderline → escalate to LLM
     # llm_result = ml_semantic_match_llm(name1, name2)
+    print("==SEMANTIC MATCH SCORE==", score)
     return score, "medium"
 
 
@@ -1792,15 +1879,17 @@ def ml_phonetic_match(name1: str, name2: str) -> tuple:
     Check if two trademark names are phonetically equivalent using fuzzy matching.
     Returns tuple of (is_match, score, confidence)
     """
+    print(f"==PHONETIC MATCH== {name1} {name2}")
     ratio = fuzz.ratio(name1.lower(), name2.lower())
 
     if ratio >= PH_HIGH:
-        return True, ratio, "high"
+        return ratio, "high"
     if ratio < PH_LOW:
-        return False, ratio, "low"
+        return ratio, "low"
 
     # Borderline → escalate to LLM
     # llm_result = ml_phonetic_match_llm(name1, name2)
+    print("==PHONETIC MATCH RATIO==", ratio)
     return ratio, "medium"
 
 
@@ -1811,6 +1900,71 @@ def section_one_analysis(mark, class_number, goods_services, relevant_conflicts)
     """
     client = get_azure_client()
 
+    print("\n=== Processing Borderline Matches with LLM ===")
+    print(f"Number of borderline matches to analyze: {len(relevant_conflicts)}")
+
+    # Process each borderline match with LLM
+    similar_marks = []
+    print("RELEVANT CONFLICTS BEING SENT TO LLM :\n", relevant_conflicts)
+    for conflict in relevant_conflicts:
+        print(f"\nAnalyzing borderline match: {conflict['trademark_name']}")
+        print(f"Semantic Score: {conflict.get('semantic_score', 'N/A')}")
+        print(f"Phonetic Score: {conflict.get('phonetic_score', 'N/A')}")
+
+        # Prepare the conflict for LLM analysis
+        # conflict_data = {
+        #     "mark": conflict["trademark_name"],
+        #     "owner": conflict.get("owner", "Unknown"),
+        #     "goods_services": conflict["goods_services"],
+        #     "status": conflict.get("status", "Unknown"),
+        #     "class": conflict.get("class_number", []),
+        #     "semantic_score": conflict.get("semantic_score", 0),
+        #     "phonetic_score": conflict.get("phonetic_score", 0),
+        # }
+
+        # Get LLM analysis for this borderline match
+        llm_analysis = analyze_borderline_match(
+            client, mark, class_number, goods_services, conflict
+        )
+
+        if llm_analysis.get("is_similar"):
+            similar_marks.append(
+                {
+                    **conflict,
+                    "similarity_type": llm_analysis.get("similarity_type", "Unknown"),
+                    "class_match": llm_analysis.get("class_match", False),
+                    "goods_services_match": llm_analysis.get(
+                        "goods_services_match", False
+                    ),
+                    "llm_confidence": llm_analysis.get("confidence", "medium"),
+                }
+            )
+
+    # Prepare the final results
+    results = {
+        "identical_marks": [],  # These will be handled separately
+        "one_letter_marks": [],  # These will be handled separately
+        "two_letter_marks": [],  # These will be handled separately
+        "similar_marks": similar_marks,
+        "crowded_field": analyze_crowded_field(similar_marks),
+    }
+
+    return results
+
+
+def analyze_borderline_match(
+    client, mark, class_number, goods_services, relevant_conflicts
+):
+    """
+    Analyze a borderline match using LLM to determine if it's similar enough to be included.
+
+    Args:
+        client: Azure OpenAI client
+        mark: Proposed trademark name
+        class_number: Proposed trademark class
+        goods_services: Proposed goods/services
+        relevant_conflicts: List of relevant trademark conflicts to analyze
+    """
     system_prompt = """
 You are a highly experienced trademark attorney specializing in trademark conflict analysis and opinion writing. Your task is to assess potential trademark conflicts using detailed, step-by-step chain of thought reasoning.
 
@@ -2006,28 +2160,7 @@ FORMAT YOUR RESPONSE STRICTLY IN JSON:
       * Look for parts in multi-word marks like ALPHA BRAIN SMART GUMMIES similar to SMART GUMMY.
       * Look for marks where components are arranged differently but convey the same meaning (e.g., "COLOR HOLD" for "COLORGRIP")
       * For compound or multi-word marks, identify ANY mark containing ALL the component words in ANY arrangement
-      * Pay special attention to mark variants where the words might be combined, separated, or hyphenated
-    - Justify the type of similarity for each mark and assess `class_match` and `goods_services_match`.
-    
-    STEP 6: Crowded Field Analysis  
-    - Count the total number of potentially conflicting marks identified.  
-    - Calculate what percentage have DIFFERENT owners.  
-    - Determine if the field is "crowded" (over 50% owned by different parties).  
-    - Explain the trademark protection implications in a crowded field context.
-    
-    IMPORTANT REMINDERS:  
-    - Focus on the full trademark, not just partial or component words.  
-    - For compound words, ensure you analyze both combined forms (e.g., "COLORGRIP") and separated forms (e.g., "COLOR GRIP") .
-    - For multi-word marks, look for combined forms (e.g., "SMART GUMMIES" vs "SMARTGUMMIES").
-    - Always include full owner names and full goods/services descriptions.  
-    - For `class_match`:  
-      * Mark as True if in class "{class_number}"  
-      * OR if in a coordinated class identified in Step 1  
-    - For `goods_services_match`:  
-      * Compare the mark's goods/services directly to the proposed goods/services.  
-    - Ensure letter difference analysis is exact (i.e., exactly one or two letters, not more).  
-    - In Similar Mark Analysis, explicitly label the similarity type: Phonetic, Semantic, or Functional.
-"""
+    """
 
     try:
         response = client.chat.completions.create(
@@ -2036,80 +2169,45 @@ FORMAT YOUR RESPONSE STRICTLY IN JSON:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
-            temperature=0.0,
+            temperature=0.3,
         )
 
-        if response.choices and len(response.choices) > 0:
-            content = response.choices[0].message.content
-
-            # Extract JSON data
-            json_match = re.search(
-                r"```json\s*(.*?)\s*```|({[\s\S]*})", content, re.DOTALL
-            )
-            if json_match:
-                json_str = json_match.group(1) or json_match.group(2)
-                try:
-                    raw_results = json.loads(json_str)
-                    # Apply consistency checking
-                    corrected_results = consistency_check(mark, raw_results)
-                    return corrected_results
-                except json.JSONDecodeError:
-                    return {
-                        "identified_coordinated_classes": [],
-                        "coordinated_classes_explanation": "Unable to identify coordinated classes",
-                        "identical_marks": [],
-                        "one_letter_marks": [],
-                        "two_letter_marks": [],
-                        "similar_marks": [],
-                        "crowded_field": {
-                            "is_crowded": False,
-                            "percentage": 0,
-                            "explanation": "Unable to determine crowded field status",
-                        },
-                    }
-            else:
-                return {
-                    "identified_coordinated_classes": [],
-                    "coordinated_classes_explanation": "Unable to identify coordinated classes",
-                    "identical_marks": [],
-                    "one_letter_marks": [],
-                    "two_letter_marks": [],
-                    "similar_marks": [],
-                    "crowded_field": {
-                        "is_crowded": False,
-                        "percentage": 0,
-                        "explanation": "Unable to determine crowded field status",
-                    },
-                }
-        else:
-            return {
-                "identified_coordinated_classes": [],
-                "coordinated_classes_explanation": "Unable to identify coordinated classes",
-                "identical_marks": [],
-                "one_letter_marks": [],
-                "two_letter_marks": [],
-                "similar_marks": [],
-                "crowded_field": {
-                    "is_crowded": False,
-                    "percentage": 0,
-                    "explanation": "Unable to determine crowded field status",
-                },
-            }
+        analysis = json.loads(response.choices[0].message.content)
+        print(f"LLM Analysis: {analysis['reasoning']}")
+        return analysis
     except Exception as e:
-        print(f"Error in section_one_analysis: {str(e)}")
+        print(f"Error in LLM analysis: {str(e)}")
         return {
-            "identified_coordinated_classes": [],
-            "coordinated_classes_explanation": "Error occurred during analysis",
-            "identical_marks": [],
-            "one_letter_marks": [],
-            "two_letter_marks": [],
-            "similar_marks": [],
-            "crowded_field": {
-                "is_crowded": False,
-                "percentage": 0,
-                "explanation": "Error occurred during analysis",
-            },
+            "is_similar": False,
+            "similarity_type": "Unknown",
+            "class_match": False,
+            "goods_services_match": False,
+            "confidence": "low",
+            "reasoning": f"Error in analysis: {str(e)}",
         }
+
+
+def analyze_crowded_field(similar_marks):
+    """
+    Analyze if the field is crowded based on the number of similar marks and their owners.
+    """
+    if not similar_marks:
+        return {
+            "is_crowded": False,
+            "percentage": 0,
+            "explanation": "No similar marks found.",
+        }
+
+    # Count unique owners
+    unique_owners = len(set(mark.get("owner", "Unknown") for mark in similar_marks))
+    total_marks = len(similar_marks)
+    percentage = (unique_owners / total_marks) * 100 if total_marks > 0 else 0
+
+    return {
+        "is_crowded": percentage > 50,
+        "percentage": percentage,
+        "explanation": f"Found {total_marks} similar marks with {unique_owners} different owners ({percentage:.1f}% unique ownership).",
+    }
 
 
 def component_consistency_check(mark, results):
@@ -2720,33 +2818,106 @@ def generate_trademark_opinion(
     conflicts_array, proposed_name, proposed_class, proposed_goods_services
 ):
     """
-    Generate a comprehensive trademark opinion by running the entire analysis process.
-
-    Args:
-        conflicts_array: List of potential trademark conflicts
-        proposed_name: Name of the proposed trademark
-        proposed_class: Class of the proposed trademark
-        proposed_goods_services: Goods and services description
-
-    Returns:
-        A comprehensive trademark opinion
+    Generate a comprehensive trademark opinion by:
+    1. Pre-filtering trademarks using ML-based similarity scores
+    2. Processing borderline matches through LLM analysis
+    3. Performing multiple analysis sections
     """
-    # Pre-filter trademarks to get the excluded count
-    relevant_conflicts, excluded_count = validate_trademark_relevance(
-        conflicts_array, proposed_goods_services
+    print("\n=== Starting Trademark Opinion Generation ===")
+
+    # Step 1: Pre-filter trademarks using ML-based similarity scores
+    filtered_results = validate_trademark_relevance(
+        conflicts_array, proposed_goods_services, proposed_name
     )
 
-    print("Performing Section I: Comprehensive Trademark Hit Analysis...")
-    section_one_results = section_one_analysis(
-        proposed_name, proposed_class, proposed_goods_services, relevant_conflicts
-    )
+    # Initialize phonetic similarity table with high confidence matches
+    phonetic_similarity_table = []
+    print("==PHONETIC SIMILARITY TABLE==")
+    print("==HIGH CONFIDENCE MATCHES==", filtered_results["high_confidence_matches"])
+    for match in filtered_results["high_confidence_matches"]:
+        phonetic_similarity_table.append(
+            {
+                "trademark_name": match["trademark_name"],
+                "owner": match.get("owner", "Unknown"),
+                "status": match.get("status", "Unknown"),
+                "class": match.get("international_class_number", []),
+                "similarity_type": "High Confidence",
+                "semantic_score": match.get("semantic_score", 0),
+                "phonetic_score": match.get("phonetic_score", 0),
+                "confidence": "high",
+            }
+        )
 
-    print("Performing Section II: Component Analysis...")
+    # Process borderline matches through LLM analysis
+    if filtered_results["borderline_matches"]:
+        print(
+            f"\nProcessing {len(filtered_results['borderline_matches'])} borderline matches..."
+        )
+        section_one_results = section_one_analysis(
+            proposed_name,
+            proposed_class,
+            proposed_goods_services,
+            filtered_results["borderline_matches"],
+        )
+
+        # Add LLM-analyzed borderline matches to phonetic similarity table
+        if section_one_results:
+            # Add identical marks
+            for mark in section_one_results.get("identical_marks", []):
+                phonetic_similarity_table.append(
+                    {
+                        "trademark_name": mark["mark"],
+                        "owner": mark["owner"],
+                        "status": mark["status"],
+                        "class": mark["class"],
+                        "similarity_type": "Identical",
+                        "confidence": "high",
+                    }
+                )
+
+            # # Add one-letter difference marks
+            # for mark in section_one_results.get("one_letter_marks", []):
+            #     phonetic_similarity_table.append({
+            #         "trademark_name": mark["mark"],
+            #         "owner": mark["owner"],
+            #         "status": mark["status"],
+            #         "class": mark["class"],
+            #         "similarity_type": "One Letter",
+            #         "confidence": "medium",
+            #     })
+
+            # # Add two-letter difference marks
+            # for mark in section_one_results.get("two_letter_marks", []):
+            #     phonetic_similarity_table.append({
+            #         "trademark_name": mark["mark"],
+            #         "owner": mark["owner"],
+            #         "status": mark["status"],
+            #         "class": mark["class"],
+            #         "similarity_type": "Two Letter",
+            #         "confidence": "medium",
+            #     })
+
+            # Add similar marks
+            for mark in section_one_results.get("similar_marks", []):
+                phonetic_similarity_table.append(
+                    {
+                        "trademark_name": mark["mark"],
+                        "owner": mark["owner"],
+                        "status": mark["status"],
+                        "class": mark["class"],
+                        "similarity_type": mark["similarity_type"],
+                        "confidence": mark.get("llm_confidence", "medium"),
+                    }
+                )
+
+    # Additional analysis sections
     section_two_results = section_two_analysis(
-        proposed_name, proposed_class, proposed_goods_services, relevant_conflicts
+        proposed_name,
+        proposed_class,
+        proposed_goods_services,
+        filtered_results["high_confidence_matches"],
     )
 
-    print("Performing Section III: Risk Assessment and Summary...")
     section_three_results = section_three_analysis(
         proposed_name,
         proposed_class,
@@ -2755,69 +2926,31 @@ def generate_trademark_opinion(
         section_two_results,
     )
 
-    # Create a comprehensive opinion structure
-    opinion_structure = {
-        "proposed_name": proposed_name,
-        "proposed_class": proposed_class,
-        "proposed_goods_services": proposed_goods_services,
-        "excluded_count": excluded_count,
-        "section_one": section_one_results,
-        "section_two": section_two_results,
-        "section_three": section_three_results,
+    # Format the final opinion
+    opinion = {
+        "proposed_mark": proposed_name,
+        "class": proposed_class,
+        "goods_services": proposed_goods_services,
+        "analysis_results": {
+            "section_one": section_one_results,
+            "section_two": section_two_results,
+            "section_three": section_three_results,
+        },
+        "phonetic_similarity_table": phonetic_similarity_table,
+        "statistics": {
+            "total_matches": len(phonetic_similarity_table),
+            "high_confidence_matches": len(filtered_results["high_confidence_matches"]),
+            "borderline_matches": len(filtered_results["borderline_matches"]),
+            "excluded_matches": filtered_results["excluded_count"],
+        },
     }
 
-    # Format the opinion in a structured way
-    comprehensive_opinion = f"""
-    REFINED TRADEMARK OPINION: {proposed_name}
-    Class: {proposed_class}
-    Goods and Services: {proposed_goods_services}
-
-    Section I: Comprehensive Trademark Hit Analysis
-    
-    (a) Identical Marks:
-    {json.dumps(section_one_results.get('identical_marks', []), indent=2)}
-    
-    (b) One Letter and Two Letter Analysis:
-    {json.dumps({
-        'one_letter_marks': section_one_results.get('one_letter_marks', []),
-        'two_letter_marks': section_one_results.get('two_letter_marks', [])
-    }, indent=2)}
-    
-    (c) Phonetically, Semantically & Functionally Similar Analysis:
-    {json.dumps(section_one_results.get('similar_marks', []), indent=2)}
-    
-    (d) Crowded Field Analysis:
-    {json.dumps(section_one_results.get('crowded_field', {}), indent=2)}
-
-    Section II: Component Analysis
-    
-    (a) Component Analysis:
-    {json.dumps(section_two_results.get('components', []), indent=2)}
-    
-    (b) Crowded Field Analysis:
-    {json.dumps(section_two_results.get('crowded_field', {}), indent=2)}
-
-    Section III: Risk Assessment and Summary
-    
-    Likelihood of Confusion:
-    {json.dumps(section_three_results.get('likelihood_of_confusion', []), indent=2)}
-    
-    Descriptiveness:
-    {json.dumps(section_three_results.get('descriptiveness', []), indent=2)}
-    
-    Overall Risk Level:
-    {json.dumps(section_three_results.get('overall_risk', {}), indent=2)}
-    
-    Note: {excluded_count} trademarks with unrelated goods/services were excluded from this analysis.
-    """
-
-    # Clean and format the final opinion
-    print("Cleaning and formatting the final opinion...")
-    formatted_opinion = clean_and_format_opinion(
-        comprehensive_opinion, opinion_structure
+    print("\n=== Trademark Opinion Generation Complete ===")
+    print(
+        f"Total matches in phonetic similarity table: {len(phonetic_similarity_table)}"
     )
 
-    return formatted_opinion
+    return opinion
 
 
 # Example usage function
