@@ -104,30 +104,132 @@ The system implements a multi-stage analysis pipeline:
 
 ## Workflow
 
-1. **Document Processing**
-   - PDF documents are read and processed
-   - Text is extracted and normalized
-   - Trademark details are parsed and structured
+The application implements a sophisticated multi-stage workflow for trademark analysis, combining machine learning models, LLM-based analysis, and comprehensive reporting. Below is a detailed breakdown of each stage:
 
-2. **Initial ML Analysis**
-   - Semantic similarity check using sentence transformers
-   - Phonetic similarity analysis
-   - Initial threshold filtering
+### 1. Document Processing and Information Extraction
 
-3. **LLM Analysis**
-   - Borderline cases (0.75-0.85 similarity) are analyzed
-   - Detailed reasoning and context evaluation
-   - Market-specific considerations
+#### Initial Document Handling
+- **PDF Processing**: The system begins by processing uploaded PDF documents using `read_pdf()`, which extracts text while optionally excluding headers and footers
+- **Text Normalization**: Extracted text undergoes preprocessing through `preprocess_text()` to standardize formatting and remove irrelevant elements
+- **Chunk Management**: Large documents are split into manageable chunks using `split_text()` with a default token limit of 1500
 
-4. **Conflict Assessment**
-   - Comprehensive comparison of trademarks
-   - Goods/services overlap analysis
-   - Market context evaluation
+#### Information Extraction
+- **Trademark Details Parsing**: The system employs two primary extraction methods:
+  - `extract_trademark_details_code1()`: Handles standard format documents
+  - `extract_trademark_details_code2()`: Processes alternative document formats
+- **Key Information Extraction**:
+  - Serial numbers via `extract_serial_number()`
+  - Ownership details through `extract_ownership()`
+  - Registration numbers using `extract_registration_number()`
+  - International class numbers and goods/services via `extract_international_class_numbers_and_goods_services()`
+  - Design phrases through `extract_design_phrase()`
 
-5. **Report Generation**
-   - Structured opinion generation
-   - Word document export
-   - Detailed analysis sections
+### 2. Initial ML-Based Analysis
+
+#### Semantic Similarity Analysis
+- **Primary Analysis**: `ml_semantic_match()` evaluates semantic relationships between trademarks using sentence transformers
+- **Threshold Implementation**:
+  - High confidence matches (>0.85): Automatically accepted
+  - Low confidence matches (<0.75): Automatically rejected
+  - Borderline cases (0.75-0.85): Queued for LLM analysis
+
+#### Phonetic Analysis
+- **Sound-Based Comparison**: `ml_phonetic_match()` performs phonetic similarity analysis
+- **Multiple Methods**:
+  - Metaphone-based comparison
+  - Levenshtein distance calculation
+  - First-word phonetic equivalence check
+
+### 3. LLM-Based Analysis for Borderline Cases
+
+#### Threshold-Based Processing
+- **Initial ML Model Processing**:
+  - All trademarks are first processed through ML models for both phonetic and semantic similarity checks
+  - Base threshold set at 0.8 with a ±0.05 margin
+  - Processing Categories:
+    - **Automatic Rejection** (< 0.75): Marks with similarity scores below 0.75 are immediately rejected without LLM analysis
+    - **Automatic Acceptance** (> 0.85): Marks with similarity scores above 0.85 are automatically accepted
+    - **LLM Analysis Queue** (0.75 - 0.85): Only marks within this range are sent for detailed LLM analysis
+
+#### LLM Analysis Pipeline
+- **Borderline Case Processing**: `analyze_borderline_match()` handles cases within the 0.75-0.85 similarity range
+- **Comprehensive Analysis**:
+  - Semantic relationship evaluation
+  - Phonetic similarity assessment
+  - Market context consideration
+  - Consumer confusion potential analysis
+  - Goods/services overlap evaluation
+
+#### Result Compilation
+- **Final Results Table**:
+  - Includes all marks with similarity scores > 0.85 (automatically accepted)
+  - Includes marks that passed LLM analysis (0.75-0.85 range)
+  - Excludes marks with similarity scores < 0.75 (automatically rejected)
+- **Result Categories**:
+  - Phonetic matches
+  - Semantic matches
+  - Combined similarity scores
+  - LLM analysis outcomes for borderline cases
+
+#### Decision Making
+- **Contextual Analysis**: LLM evaluates multiple factors:
+  - Industry-specific considerations
+  - Market segment overlap
+  - Consumer perception factors
+  - Historical trademark usage patterns
+- **Final Classification**:
+  - High confidence matches (> 0.85)
+  - LLM-validated matches (0.75-0.85)
+  - Rejected matches (< 0.75)
+
+### 4. Conflict Assessment and Validation
+
+#### Primary Conflict Analysis
+- **Trademark Comparison**: `compare_trademarks()` performs comprehensive comparison
+- **Multi-factor Evaluation**:
+  - Name similarity assessment
+  - Class number overlap
+  - Goods/services relationship
+  - Market segment analysis
+
+#### Validation and Refinement
+- **Relevance Validation**: `validate_trademark_relevance()` confirms similarity findings
+- **Conflict Assessment**: `assess_conflict()` provides detailed conflict analysis
+- **Crowded Field Analysis**: `analyze_crowded_field()` evaluates market saturation
+
+### 5. Report Generation and Export
+
+#### Opinion Generation
+- **Comprehensive Analysis**: `generate_trademark_opinion()` creates detailed reports
+- **Section-wise Analysis**:
+  - Section One: Primary similarity analysis
+  - Section Two: Detailed conflict assessment
+  - Section Three: Market impact analysis
+  - Web Common Law: Online presence evaluation
+
+#### Document Export
+- **Word Document Creation**: `export_trademark_opinion_to_word()` generates formatted reports
+- **Content Processing**: `process_opinion_content()` structures the analysis
+- **Formatting**: 
+  - Cell text formatting via `format_cell_text()`
+  - Paragraph formatting through `format_paragraph_text()`
+
+### 6. Additional Analysis Features
+
+#### Web Common Law Analysis
+- **Online Presence**: `web_law_page()` processes web-based trademark information
+- **Image Processing**: 
+  - Page conversion via `convert_pages_to_pil_images()`
+  - Image encoding through `encode_image()`
+  - Single image processing using `process_single_image()`
+
+#### Component Analysis
+- **Consistency Checking**: `component_consistency_check()` evaluates trademark components
+- **Crowded Field Analysis**: `analyze_crowded_field()` assesses market saturation
+- **Section-wise Analysis**:
+  - Section Four: Web presence analysis
+  - Section Five: Component consistency
+  - Section Six: Comprehensive evaluation
 
 ## Usage
 
